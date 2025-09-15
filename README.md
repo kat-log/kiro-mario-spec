@@ -52,18 +52,27 @@ HTML5 Canvas と JavaScript で作られたマリオ風横スクロールアク�
 ### 必要な環境
 
 - モダンな Web ブラウザ（Chrome、Firefox、Safari、Edge）
-- ローカル Web サーバー（開発時）
 
 ### 実行方法
 
-1. **リポジトリをクローン**
+#### 🎯 最も簡単な方法（推奨）
 
 ```bash
+# リポジトリをクローンまたはダウンロード
 git clone <repository-url>
 cd mario-style-platformer
+
+# ブラウザで直接開く
+open index.html        # macOS
+start index.html       # Windows
+xdg-open index.html    # Linux
 ```
 
-2. **ローカルサーバーで実行**
+または、ファイルエクスプローラーで `index.html` をダブルクリックしてブラウザで開く
+
+#### 🔧 ローカルサーバーで実行（開発時推奨）
+
+一部の機能（音声ファイル読み込みなど）はローカルサーバーが必要な場合があります：
 
 ```bash
 # Python 3の場合
@@ -76,11 +85,7 @@ npx serve .
 Live Server拡張機能を使用
 ```
 
-3. **ブラウザでアクセス**
-
-```
-http://localhost:8000
-```
+ブラウザで `http://localhost:8000` にアクセス
 
 ## 📁 プロジェクト構造
 

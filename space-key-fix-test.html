@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>スペースキー修正テスト</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #1a1a1a;
+        color: white;
+        margin: 0;
+      }
+      .test-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .test-section {
+        background: #333;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .success {
+        background: #4caf50;
+      }
+      .error {
+        background: #f44336;
+      }
+      .warning {
+        background: #ff9800;
+      }
+      .info {
+        background: #2196f3;
+      }
+
+      #game-canvas {
+        border: 2px solid #fff;
+        border-radius: 5px;
+        display: block;
+        margin: 20px auto;
+        background: #5c94fc;
+      }
+
+      button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+        font-size: 16px;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+
+      .log {
+        background: #111;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>🔧 スペースキー修正テスト</h1>
+
+      <div class="test-section">
+        <h3>📋 テスト手順</h3>
+        <ol>
+          <li>「ゲーム初期化」ボタンをクリック</li>
+          <li>「ゲーム開始」ボタンをクリック</li>
+          <li>スペースキーでジャンプをテスト</li>
+          <li>ゴールに到達してスペースキーで次に進むをテスト</li>
+        </ol>
+      </div>
+
+      <div class="test-section">
+        <h3>🎮 ゲームコントロール</h3>
+        <button onclick="initGame()" id="init-btn">ゲーム初期化</button>
+        <button onclick="startGame()" id="start-btn" disabled>
+          ゲーム開始
+        </button>
+        <button onclick="testSpaceKey()">スペースキーテスト</button>
+        <button onclick="clearLog()">ログクリア</button>
+
+        <canvas
+          id="game-canvas"
+          width="800"
+          height="600"
+          tabindex="0"
+          style="display: none"
+        >
+          お使いのブラウザはHTML5 Canvasをサポートしていません。
+        </canvas>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 テスト結果</h3>
+        <div id="test-status" class="status info">テスト準備中...</div>
+      </div>
+
+      <div class="test-section">
+        <h3>📝 デバッグログ</h3>
+        <div id="debug-log" class="log">ログ待機中...</div>
+      </div>
+    </div>
+
+    <!-- ゲームスクリプトの読み込み -->
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      let gameEngine = null;
+      let logMessages = [];
+
+      // ログ機能を拡張
+      const originalConsoleLog = console.log;
+      console.log = function (...args) {
+        originalConsoleLog.apply(console, args);
+        const message = args.join(" ");
+        logMessages.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+        updateDebugLog();
+      };
+
+      function updateDebugLog() {
+        const logDiv = document.getElementById("debug-log");
+        logDiv.textContent = logMessages.slice(-50).join("\n"); // 最新50件
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      function updateStatus(message, type = "info") {
+        const statusDiv = document.getElementById("test-status");
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+      }
+
+      async function initGame() {
+        try {
+          updateStatus("ゲームエンジンを初期化中...", "info");
+          console.log("=== ゲーム初期化開始 ===");
+
+          const canvas = document.getElementById("game-canvas");
+          canvas.style.display = "block";
+          canvas.focus(); // フォーカスを設定
+
+          gameEngine = new GameEngine(canvas);
+          const success = await gameEngine.init();
+
+          if (success) {
+            document.getElementById("start-btn").disabled = false;
+            updateStatus("ゲームエンジンが正常に初期化されました", "success");
+            console.log("=== ゲーム初期化完了 ===");
+          } else {
+            updateStatus("ゲームエンジンの初期化に失敗しました", "error");
+            console.log("=== ゲーム初期化失敗 ===");
+          }
+        } catch (error) {
+          updateStatus(`初期化エラー: ${error.message}`, "error");
+          console.log("=== ゲーム初期化エラー ===", error);
+        }
+      }
+
+      function startGame() {
+        if (!gameEngine) {
+          updateStatus("ゲームエンジンが初期化されていません", "error");
+          return;
+        }
+
+        try {
+          console.log("=== ゲーム開始 ===");
+          gameEngine.start();
+          updateStatus(
+            "ゲームが開始されました。スペースキーでジャンプをテストしてください。",
+            "success"
+          );
+
+          // フォーカスを確実にCanvasに設定
+          const canvas = document.getElementById("game-canvas");
+          canvas.focus();
+
+          console.log("Canvas focused, ready for input");
+        } catch (error) {
+          updateStatus(`ゲーム開始エラー: ${error.message}`, "error");
+          console.log("=== ゲーム開始エラー ===", error);
+        }
+      }
+
+      function testSpaceKey() {
+        console.log("=== スペースキー手動テスト ===");
+
+        if (!gameEngine || !gameEngine.inputManager) {
+          console.log("InputManagerが利用できません");
+          return;
+        }
+
+        const inputManager = gameEngine.inputManager;
+        const debugInfo = inputManager.getDebugInfo();
+        const playerInput = inputManager.getPlayerInput();
+
+        console.log("現在のキー状態:", debugInfo.pressedKeys);
+        console.log("現在のアクション:", debugInfo.activeActions);
+        console.log("ジャンプ入力:", playerInput.jump);
+        console.log("ジャンプホールド:", playerInput.jumpHeld);
+
+        // スペースキーの直接テスト
+        const spaceHeld = inputManager.isKeyHeld("Space");
+        const spacePressed = inputManager.isKeyPressed("Space");
+        const jumpAction = inputManager.isActionPressed("jump");
+
+        console.log(
+          `Space held: ${spaceHeld}, pressed: ${spacePressed}, jump action: ${jumpAction}`
+        );
+      }
+
+      function clearLog() {
+        logMessages = [];
+        updateDebugLog();
+      }
+
+      // キーボードイベントの監視
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space") {
+          console.log(`🔍 Raw Space keydown detected: ${event.code}`);
+          event.preventDefault(); // スクロールを防ぐ
+        }
+      });
+
+      document.addEventListener("keyup", (event) => {
+        if (event.code === "Space") {
+          console.log(`🔍 Raw Space keyup detected: ${event.code}`);
+        }
+      });
+
+      // ページ読み込み完了時
+      window.addEventListener("load", () => {
+        console.log("ページ読み込み完了");
+        updateStatus(
+          "テスト準備完了。「ゲーム初期化」ボタンをクリックしてください。",
+          "info"
+        );
+      });
+
+      // フォーカス管理
+      document.addEventListener("click", (event) => {
+        if (event.target.id === "game-canvas") {
+          console.log("Canvas clicked, focusing...");
+          event.target.focus();
+        }
+      });
+    </script>
+  </body>
+</html>

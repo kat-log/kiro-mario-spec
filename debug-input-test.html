@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>入力デバッグテスト</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #222;
+        color: white;
+      }
+      .debug-panel {
+        background: #333;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 10px 0;
+      }
+      .key-display {
+        font-family: monospace;
+        background: #111;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .active {
+        background: #4caf50;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎮 入力デバッグテスト</h1>
+
+    <div class="debug-panel">
+      <h3>キー入力状態</h3>
+      <div class="key-display" id="key-status">キーを押してください...</div>
+    </div>
+
+    <div class="debug-panel">
+      <h3>アクション状態</h3>
+      <div class="key-display" id="action-status">アクション待機中...</div>
+    </div>
+
+    <div class="debug-panel">
+      <h3>プレイヤー入力</h3>
+      <div class="key-display" id="player-input">プレイヤー入力待機中...</div>
+    </div>
+
+    <div class="debug-panel">
+      <h3>テスト結果</h3>
+      <div class="key-display" id="test-results">テスト開始前...</div>
+    </div>
+
+    <script src="js/input-manager.js"></script>
+    <script>
+      let inputManager;
+      let testResults = [];
+
+      // 入力管理システムを初期化
+      function initInputManager() {
+        try {
+          inputManager = new InputManager();
+          console.log("InputManager initialized successfully");
+          testResults.push("✅ InputManager初期化成功");
+          startInputTest();
+        } catch (error) {
+          console.error("InputManager initialization failed:", error);
+          testResults.push("❌ InputManager初期化失敗: " + error.message);
+          updateTestResults();
+        }
+      }
+
+      // 入力テストを開始
+      function startInputTest() {
+        setInterval(() => {
+          if (inputManager) {
+            inputManager.update();
+            updateDebugDisplay();
+          }
+        }, 16); // 60FPS
+      }
+
+      // デバッグ表示を更新
+      function updateDebugDisplay() {
+        const debugInfo = inputManager.getDebugInfo();
+        const playerInput = inputManager.getPlayerInput();
+
+        // キー状態表示
+        document.getElementById("key-status").innerHTML = `
+                押されているキー: ${
+                  debugInfo.pressedKeys.join(", ") || "なし"
+                }<br>
+                アクティブなアクション: ${
+                  debugInfo.activeActions.join(", ") || "なし"
+                }<br>
+                追跡中のキー数: ${debugInfo.totalKeysTracked}
+            `;
+
+        // アクション状態表示
+        document.getElementById("action-status").innerHTML = `
+                moveLeft: ${inputManager.isActionHeld("moveLeft")}<br>
+                moveRight: ${inputManager.isActionHeld("moveRight")}<br>
+                jump: ${inputManager.isActionHeld(
+                  "jump"
+                )} (pressed: ${inputManager.isActionPressed("jump")})<br>
+                dash: ${inputManager.isActionHeld("dash")}<br>
+                block: ${inputManager.isActionHeld("block")}<br>
+                pause: ${inputManager.isActionPressed("pause")}<br>
+                enter: ${inputManager.isActionPressed("enter")}
+            `;
+
+        // プレイヤー入力表示
+        document.getElementById("player-input").innerHTML = `
+                moveLeft: ${playerInput.moveLeft}<br>
+                moveRight: ${playerInput.moveRight}<br>
+                jump: ${playerInput.jump} (held: ${playerInput.jumpHeld})<br>
+                dash: ${playerInput.dash}<br>
+                block: ${playerInput.block}<br>
+                pause: ${playerInput.pause}<br>
+                enter: ${playerInput.enter}<br>
+                escape: ${playerInput.escape}
+            `;
+
+        // スペースキーの特別テスト
+        if (inputManager.isKeyPressed("Space")) {
+          testResults.push(
+            "✅ スペースキー押下検出: " + new Date().toLocaleTimeString()
+          );
+          updateTestResults();
+        }
+
+        if (playerInput.jump) {
+          testResults.push(
+            "✅ ジャンプアクション検出: " + new Date().toLocaleTimeString()
+          );
+          updateTestResults();
+        }
+      }
+
+      // テスト結果を更新
+      function updateTestResults() {
+        const resultsDiv = document.getElementById("test-results");
+        resultsDiv.innerHTML = testResults.slice(-10).join("<br>"); // 最新10件を表示
+      }
+
+      // 手動テスト関数
+      function testSpaceKey() {
+        if (!inputManager) {
+          testResults.push("❌ InputManagerが初期化されていません");
+          updateTestResults();
+          return;
+        }
+
+        const isSpaceHeld = inputManager.isKeyHeld("Space");
+        const isSpacePressed = inputManager.isKeyPressed("Space");
+        const isJumpAction = inputManager.isActionPressed("jump");
+
+        testResults.push(
+          `🔍 手動テスト - Space held: ${isSpaceHeld}, pressed: ${isSpacePressed}, jump: ${isJumpAction}`
+        );
+        updateTestResults();
+      }
+
+      // キーボードイベントリスナーを追加（デバッグ用）
+      document.addEventListener("keydown", (event) => {
+        console.log("Raw keydown event:", event.code, event.key);
+        testResults.push(`🔍 Raw keydown: ${event.code} (${event.key})`);
+        updateTestResults();
+      });
+
+      document.addEventListener("keyup", (event) => {
+        console.log("Raw keyup event:", event.code, event.key);
+        testResults.push(`🔍 Raw keyup: ${event.code} (${event.key})`);
+        updateTestResults();
+      });
+
+      // ページ読み込み時に初期化
+      window.addEventListener("load", () => {
+        initInputManager();
+      });
+
+      // 手動テスト用のボタンを追加
+      document.addEventListener("DOMContentLoaded", () => {
+        const button = document.createElement("button");
+        button.textContent = "スペースキー手動テスト";
+        button.onclick = testSpaceKey;
+        button.style.cssText = "padding: 10px; margin: 10px; font-size: 16px;";
+        document.body.appendChild(button);
+      });
+    </script>
+  </body>
+</html>

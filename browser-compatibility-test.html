@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>マリオスタイルプラットフォーマー - ブラウザ互換性テスト</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .test-section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .test-button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin: 5px;
+        transition: background 0.3s;
+      }
+
+      .test-button:hover {
+        background: #45a049;
+      }
+
+      .test-button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+
+      .results {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 15px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+
+      .status.compatible {
+        background: #4caf50;
+      }
+
+      .status.incompatible {
+        background: #f44336;
+      }
+
+      .status.warning {
+        background: #ff9800;
+      }
+
+      .game-canvas {
+        border: 2px solid #fff;
+        border-radius: 5px;
+        display: block;
+        margin: 20px auto;
+        background: #5c94fc;
+      }
+
+      .controls {
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .info-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 15px;
+      }
+
+      .info-card h3 {
+        margin-top: 0;
+        color: #ffd700;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4caf50, #8bc34a);
+        transition: width 0.3s ease;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎮 マリオスタイルプラットフォーマー</h1>
+        <h2>ブラウザ互換性テスト & バグ修正</h2>
+      </div>
+
+      <div class="test-section">
+        <h3>🌐 ブラウザ情報</h3>
+        <div id="browser-info">
+          <p>ブラウザ情報を読み込み中...</p>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧪 互換性テスト</h3>
+        <div class="controls">
+          <button class="test-button" onclick="runCompatibilityTest()">
+            互換性チェック実行
+          </button>
+          <button class="test-button" onclick="runBugDetection()">
+            バグ検出実行
+          </button>
+          <button class="test-button" onclick="runPerformanceTest()">
+            パフォーマンステスト
+          </button>
+          <button class="test-button" onclick="applyFixes()">
+            自動修正適用
+          </button>
+        </div>
+        <div id="test-results" class="results" style="display: none"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>🎯 ユーザビリティ改善</h3>
+        <div class="controls">
+          <button class="test-button" onclick="enableMobileControls()">
+            モバイルコントロール有効化
+          </button>
+          <button class="test-button" onclick="enableHighContrast()">
+            高コントラスト有効化
+          </button>
+          <button class="test-button" onclick="enableReducedMotion()">
+            モーション軽減有効化
+          </button>
+          <button class="test-button" onclick="generateUsabilityReport()">
+            改善レポート生成
+          </button>
+        </div>
+        <div id="usability-results" class="results" style="display: none"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>🎮 ゲームテスト</h3>
+        <div class="controls">
+          <button
+            class="test-button"
+            onclick="initializeGame()"
+            id="init-button"
+          >
+            ゲーム初期化
+          </button>
+          <button
+            class="test-button"
+            onclick="startGame()"
+            id="start-button"
+            disabled
+          >
+            ゲーム開始
+          </button>
+          <button class="test-button" onclick="runSystemValidation()">
+            システム検証
+          </button>
+        </div>
+        <canvas
+          id="game-canvas"
+          class="game-canvas"
+          width="800"
+          height="600"
+          style="display: none"
+        >
+          お使いのブラウザはHTML5 Canvasをサポートしていません。
+        </canvas>
+        <div id="game-status" class="results" style="display: none"></div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <h3>📊 テスト統計</h3>
+          <div id="test-stats">
+            <p>実行されたテスト: <span id="tests-run">0</span></p>
+            <p>成功したテスト: <span id="tests-passed">0</span></p>
+            <p>失敗したテスト: <span id="tests-failed">0</span></p>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                id="success-rate"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3>🔧 適用された修正</h3>
+          <div id="applied-fixes">
+            <p>まだ修正は適用されていません</p>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3>⚠️ 検出された問題</h3>
+          <div id="detected-issues">
+            <p>問題の検出を開始してください</p>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3>💡 推奨事項</h3>
+          <div id="recommendations">
+            <p>テストを実行して推奨事項を取得してください</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ゲームスクリプトの読み込み -->
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      // グローバル変数
+      let gameEngine = null;
+      let testStats = {
+        run: 0,
+        passed: 0,
+        failed: 0,
+      };
+
+      // ページ読み込み時の初期化
+      window.addEventListener("load", function () {
+        displayBrowserInfo();
+        updateTestStats();
+      });
+
+      // ブラウザ情報を表示
+      function displayBrowserInfo() {
+        const info = {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          cookieEnabled: navigator.cookieEnabled,
+          onLine: navigator.onLine,
+          screen: `${screen.width}x${screen.height}`,
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+        };
+
+        const browserInfoDiv = document.getElementById("browser-info");
+        browserInfoDiv.innerHTML = `
+                <p><strong>ユーザーエージェント:</strong> ${info.userAgent}</p>
+                <p><strong>プラットフォーム:</strong> ${info.platform}</p>
+                <p><strong>言語:</strong> ${info.language}</p>
+                <p><strong>画面解像度:</strong> ${info.screen}</p>
+                <p><strong>ビューポート:</strong> ${info.viewport}</p>
+                <p><strong>Cookie有効:</strong> ${
+                  info.cookieEnabled ? "はい" : "いいえ"
+                }</p>
+                <p><strong>オンライン:</strong> ${
+                  info.onLine ? "はい" : "いいえ"
+                }</p>
+            `;
+      }
+
+      // 互換性テストを実行
+      async function runCompatibilityTest() {
+        showResults("test-results", "ブラウザ互換性チェックを実行中...");
+
+        try {
+          const checker = new BrowserCompatibilityChecker();
+          const report = await checker.runCompatibilityCheck();
+
+          testStats.run++;
+          if (report.compatibility.isCompatible) {
+            testStats.passed++;
+          } else {
+            testStats.failed++;
+          }
+
+          displayCompatibilityResults(report);
+          updateTestStats();
+          updateIssues(report.issues);
+          updateRecommendations(report.recommendations);
+        } catch (error) {
+          testStats.run++;
+          testStats.failed++;
+          showResults("test-results", `エラー: ${error.message}`);
+          updateTestStats();
+        }
+      }
+
+      // バグ検出を実行
+      async function runBugDetection() {
+        if (!gameEngine) {
+          showResults(
+            "test-results",
+            "ゲームエンジンが初期化されていません。先にゲームを初期化してください。"
+          );
+          return;
+        }
+
+        showResults("test-results", "バグ検出を実行中...");
+
+        try {
+          const bugDetector = new BugDetector(gameEngine);
+          const report = await bugDetector.runBugDetection();
+
+          testStats.run++;
+          if (report.summary.criticalIssues === 0) {
+            testStats.passed++;
+          } else {
+            testStats.failed++;
+          }
+
+          displayBugResults(report);
+          updateTestStats();
+        } catch (error) {
+          testStats.run++;
+          testStats.failed++;
+          showResults("test-results", `エラー: ${error.message}`);
+          updateTestStats();
+        }
+      }
+
+      // パフォーマンステストを実行
+      async function runPerformanceTest() {
+        showResults("test-results", "パフォーマンステストを実行中...");
+
+        try {
+          const checker = new BrowserCompatibilityChecker();
+          const performanceResult = await checker.testGamePerformance();
+
+          testStats.run++;
+          if (performanceResult.performanceLevel === "good") {
+            testStats.passed++;
+          } else {
+            testStats.failed++;
+          }
+
+          displayPerformanceResults(performanceResult);
+          updateTestStats();
+        } catch (error) {
+          testStats.run++;
+          testStats.failed++;
+          showResults("test-results", `エラー: ${error.message}`);
+          updateTestStats();
+        }
+      }
+
+      // 自動修正を適用
+      async function applyFixes() {
+        showResults("test-results", "自動修正を適用中...");
+
+        try {
+          const fixes = [];
+
+          // ブラウザ互換性修正
+          const checker = new BrowserCompatibilityChecker();
+          const compatibilityFixes = await checker.applyCompatibilityFixes();
+          fixes.push(...compatibilityFixes);
+
+          // バグ修正（ゲームエンジンが初期化されている場合）
+          if (gameEngine && gameEngine.bugDetector) {
+            await gameEngine.bugDetector.applyAutoFixes();
+            fixes.push("バグ自動修正を適用");
+          }
+
+          displayAppliedFixes(fixes);
+          showResults(
+            "test-results",
+            `${fixes.length}個の修正を適用しました:\n${fixes.join("\n")}`
+          );
+        } catch (error) {
+          showResults("test-results", `修正適用エラー: ${error.message}`);
+        }
+      }
+
+      // ゲームを初期化
+      async function initializeGame() {
+        const canvas = document.getElementById("game-canvas");
+        canvas.style.display = "block";
+
+        showResults("game-status", "ゲームエンジンを初期化中...");
+
+        try {
+          gameEngine = new GameEngine(canvas);
+          const success = await gameEngine.init();
+
+          if (success) {
+            document.getElementById("start-button").disabled = false;
+            showResults(
+              "game-status",
+              "ゲームエンジンが正常に初期化されました"
+            );
+            testStats.run++;
+            testStats.passed++;
+          } else {
+            showResults("game-status", "ゲームエンジンの初期化に失敗しました");
+            testStats.run++;
+            testStats.failed++;
+          }
+
+          updateTestStats();
+        } catch (error) {
+          showResults("game-status", `初期化エラー: ${error.message}`);
+          testStats.run++;
+          testStats.failed++;
+          updateTestStats();
+        }
+      }
+
+      // ゲームを開始
+      function startGame() {
+        if (!gameEngine) {
+          showResults("game-status", "ゲームエンジンが初期化されていません");
+          return;
+        }
+
+        try {
+          gameEngine.start();
+          showResults(
+            "game-status",
+            "ゲームが開始されました\n\nコントロール:\n- 矢印キー: 移動\n- スペース: ジャンプ\n- X: ダッシュ\n- P: ポーズ"
+          );
+        } catch (error) {
+          showResults("game-status", `ゲーム開始エラー: ${error.message}`);
+        }
+      }
+
+      // システム検証を実行
+      async function runSystemValidation() {
+        if (!gameEngine) {
+          showResults("game-status", "ゲームエンジンが初期化されていません");
+          return;
+        }
+
+        showResults("game-status", "システム検証を実行中...");
+
+        try {
+          const report = await gameEngine.runSystemValidation();
+
+          testStats.run++;
+          if (report.summary.failedSystems === 0) {
+            testStats.passed++;
+          } else {
+            testStats.failed++;
+          }
+
+          displaySystemValidationResults(report);
+          updateTestStats();
+        } catch (error) {
+          testStats.run++;
+          testStats.failed++;
+          showResults("game-status", `システム検証エラー: ${error.message}`);
+          updateTestStats();
+        }
+      }
+
+      // モバイルコントロールを有効化
+      function enableMobileControls() {
+        if (!gameEngine || !gameEngine.usabilityImprovements) {
+          showResults(
+            "usability-results",
+            "ゲームエンジンまたはユーザビリティシステムが初期化されていません"
+          );
+          return;
+        }
+
+        try {
+          gameEngine.usabilityImprovements.enableMobileControls();
+          showResults(
+            "usability-results",
+            "モバイルコントロールが有効になりました"
+          );
+        } catch (error) {
+          showResults("usability-results", `エラー: ${error.message}`);
+        }
+      }
+
+      // 高コントラストを有効化
+      function enableHighContrast() {
+        if (!gameEngine || !gameEngine.usabilityImprovements) {
+          // 直接適用
+          document.body.classList.add("high-contrast");
+          showResults("usability-results", "高コントラストが有効になりました");
+          return;
+        }
+
+        try {
+          gameEngine.usabilityImprovements.enableHighContrast();
+          showResults("usability-results", "高コントラストが有効になりました");
+        } catch (error) {
+          showResults("usability-results", `エラー: ${error.message}`);
+        }
+      }
+
+      // モーション軽減を有効化
+      function enableReducedMotion() {
+        if (!gameEngine || !gameEngine.usabilityImprovements) {
+          showResults(
+            "usability-results",
+            "ゲームエンジンが初期化されていません"
+          );
+          return;
+        }
+
+        try {
+          gameEngine.usabilityImprovements.enableReducedMotion();
+          showResults("usability-results", "モーション軽減が有効になりました");
+        } catch (error) {
+          showResults("usability-results", `エラー: ${error.message}`);
+        }
+      }
+
+      // ユーザビリティレポートを生成
+      function generateUsabilityReport() {
+        if (!gameEngine || !gameEngine.usabilityImprovements) {
+          showResults(
+            "usability-results",
+            "ゲームエンジンが初期化されていません"
+          );
+          return;
+        }
+
+        try {
+          const report =
+            gameEngine.usabilityImprovements.generateImprovementReport();
+          displayUsabilityResults(report);
+        } catch (error) {
+          showResults("usability-results", `エラー: ${error.message}`);
+        }
+      }
+
+      // 結果を表示
+      function showResults(elementId, text) {
+        const element = document.getElementById(elementId);
+        element.style.display = "block";
+        element.textContent = text;
+      }
+
+      // 互換性結果を表示
+      function displayCompatibilityResults(report) {
+        const status = report.compatibility.isCompatible
+          ? "compatible"
+          : "incompatible";
+        const statusText = report.compatibility.isCompatible
+          ? "互換性あり"
+          : "互換性問題あり";
+
+        let result = `ブラウザ互換性チェック結果\n`;
+        result += `ステータス: ${statusText}\n`;
+        result += `重大な問題: ${report.compatibility.criticalIssues}\n`;
+        result += `警告: ${report.compatibility.warnings}\n`;
+        result += `推奨事項: ${report.compatibility.recommendations}\n\n`;
+
+        if (report.issues.length > 0) {
+          result += "検出された問題:\n";
+          report.issues.forEach((issue) => {
+            result += `- ${issue.feature}: ${issue.message}\n`;
+          });
+        }
+
+        showResults("test-results", result);
+      }
+
+      // バグ結果を表示
+      function displayBugResults(report) {
+        let result = `バグ検出結果\n`;
+        result += `総バグ数: ${report.summary.totalBugs}\n`;
+        result += `重大: ${report.summary.critical}\n`;
+        result += `高: ${report.summary.high}\n`;
+        result += `中: ${report.summary.medium}\n`;
+        result += `低: ${report.summary.low}\n`;
+        result += `自動修正可能: ${report.summary.autoFixable}\n\n`;
+
+        if (report.bugs.length > 0) {
+          result += "検出されたバグ:\n";
+          report.bugs.forEach((bug) => {
+            result += `- [${bug.severity}] ${bug.issue}: ${bug.description}\n`;
+          });
+        }
+
+        showResults("test-results", result);
+      }
+
+      // パフォーマンス結果を表示
+      function displayPerformanceResults(result) {
+        let output = `パフォーマンステスト結果\n`;
+        output += `平均フレーム時間: ${result.averageFrameTime.toFixed(2)}ms\n`;
+        output += `最大フレーム時間: ${result.maxFrameTime.toFixed(2)}ms\n`;
+        output += `最小フレーム時間: ${result.minFrameTime.toFixed(2)}ms\n`;
+        output += `推定FPS: ${result.estimatedFPS.toFixed(1)}\n`;
+        output += `パフォーマンスレベル: ${result.performanceLevel}\n`;
+
+        showResults("test-results", output);
+      }
+
+      // システム検証結果を表示
+      function displaySystemValidationResults(report) {
+        let result = `システム検証結果\n`;
+        result += `総システム数: ${report.summary.totalSystems}\n`;
+        result += `成功: ${report.summary.passedSystems}\n`;
+        result += `失敗: ${report.summary.failedSystems}\n`;
+        result += `成功率: ${report.summary.successRate.toFixed(1)}%\n\n`;
+
+        if (report.criticalIssues.length > 0) {
+          result += "重大な問題:\n";
+          report.criticalIssues.forEach((issue) => {
+            result += `- ${issue}\n`;
+          });
+        }
+
+        showResults("game-status", result);
+      }
+
+      // ユーザビリティ結果を表示
+      function displayUsabilityResults(report) {
+        let result = `ユーザビリティ改善レポート\n`;
+        result += `総改善提案: ${report.totalImprovements}\n`;
+        result += `適用済み: ${report.appliedImprovements}\n`;
+        result += `アクセシビリティ: ${report.categories.accessibility}\n`;
+        result += `モバイル対応: ${report.categories.mobile}\n`;
+        result += `ディスプレイ: ${report.categories.display}\n\n`;
+
+        if (report.applied.length > 0) {
+          result += "適用された改善:\n";
+          report.applied.forEach((improvement) => {
+            result += `- ${improvement.improvement}\n`;
+          });
+        }
+
+        showResults("usability-results", result);
+      }
+
+      // テスト統計を更新
+      function updateTestStats() {
+        document.getElementById("tests-run").textContent = testStats.run;
+        document.getElementById("tests-passed").textContent = testStats.passed;
+        document.getElementById("tests-failed").textContent = testStats.failed;
+
+        const successRate =
+          testStats.run > 0 ? (testStats.passed / testStats.run) * 100 : 0;
+        document.getElementById("success-rate").style.width = successRate + "%";
+      }
+
+      // 適用された修正を更新
+      function displayAppliedFixes(fixes) {
+        const element = document.getElementById("applied-fixes");
+        if (fixes.length === 0) {
+          element.innerHTML = "<p>まだ修正は適用されていません</p>";
+        } else {
+          element.innerHTML = fixes.map((fix) => `<p>✅ ${fix}</p>`).join("");
+        }
+      }
+
+      // 検出された問題を更新
+      function updateIssues(issues) {
+        const element = document.getElementById("detected-issues");
+        if (issues.length === 0) {
+          element.innerHTML = "<p>問題は検出されませんでした</p>";
+        } else {
+          element.innerHTML = issues
+            .map((issue) => `<p>⚠️ ${issue.feature}: ${issue.message}</p>`)
+            .join("");
+        }
+      }
+
+      // 推奨事項を更新
+      function updateRecommendations(recommendations) {
+        const element = document.getElementById("recommendations");
+        if (recommendations.length === 0) {
+          element.innerHTML = "<p>推奨事項はありません</p>";
+        } else {
+          element.innerHTML = recommendations
+            .map((rec) => `<p>💡 ${rec}</p>`)
+            .join("");
+        }
+      }
+    </script>
+  </body>
+</html>

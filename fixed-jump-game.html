@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>修正版 Mario Style Platformer</title>
+    <link rel="stylesheet" href="styles/main.css" />
+    <style>
+      /* 追加のスタイル */
+      #game-instructions {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        text-align: center;
+        font-size: 18px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 100;
+      }
+
+      #game-instructions.hidden {
+        display: none;
+      }
+
+      .jump-indicator {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: yellow;
+        font-size: 16px;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 5px 10px;
+        border-radius: 5px;
+        z-index: 50;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+
+      <!-- ゲーム開始指示 -->
+      <div id="game-instructions">
+        <h2>🎮 Mario Style Platformer</h2>
+        <p><strong>操作方法:</strong></p>
+        <p>🏃 移動: ←→ または A/D</p>
+        <p>🦘 ジャンプ: スペース または ↑ または W または Enter</p>
+        <p>⏸️ ポーズ: P</p>
+        <p>🚪 メニューに戻る: Escape</p>
+        <br />
+        <p><strong>🎯 スペースキーまたはEnterでゲーム開始！</strong></p>
+      </div>
+
+      <!-- ジャンプ状態表示 -->
+      <div id="jump-indicator" class="jump-indicator hidden">ジャンプ中！</div>
+
+      <div id="ui-overlay">
+        <div id="hud" class="hidden">
+          <div id="score">Score: <span id="score-value">0</span></div>
+          <div id="coins">Coins: <span id="coin-value">0</span></div>
+          <div id="lives">Lives: <span id="lives-value">3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 必要なJavaScriptファイルを読み込み -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+
+    <script>
+      // 修正版ゲームエンジン
+      class FixedGameEngine {
+        constructor() {
+          this.canvas = document.getElementById("game-canvas");
+          this.ctx = this.canvas.getContext("2d");
+
+          // UI要素
+          this.instructionsElement =
+            document.getElementById("game-instructions");
+          this.jumpIndicator = document.getElementById("jump-indicator");
+          this.hudElement = document.getElementById("hud");
+
+          // ゲーム状態
+          this.gameState = {
+            mode: "menu", // 'menu', 'playing', 'paused'
+            isRunning: false,
+          };
+
+          // タイミング
+          this.lastFrameTime = 0;
+          this.fps = 0;
+          this.frameCount = 0;
+          this.fpsUpdateTime = 0;
+
+          // ゲームオブジェクト
+          this.inputManager = null;
+          this.physicsEngine = null;
+          this.player = null;
+          this.stage = null;
+
+          // ジャンプ表示タイマー
+          this.jumpIndicatorTimer = 0;
+
+          console.log("🎮 修正版ゲームエンジン初期化中...");
+          this.init();
+        }
+
+        async init() {
+          try {
+            // フォーカス確保
+            this.canvas.focus();
+
+            // 入力管理初期化
+            this.inputManager = new InputManager(this.canvas);
+            console.log("✅ InputManager初期化完了");
+
+            // 物理エンジン初期化
+            this.physicsEngine = new PhysicsEngine();
+            console.log("✅ PhysicsEngine初期化完了");
+
+            // プレイヤー初期化
+            this.player = new Player(100, 400);
+            console.log("✅ Player初期化完了");
+
+            // ステージ初期化
+            this.stage = new Stage();
+            console.log("✅ Stage初期化完了");
+
+            // ゲームループ開始
+            this.gameState.isRunning = true;
+            this.gameLoop();
+
+            console.log("🎮 ゲーム準備完了！スペースキーでスタート！");
+          } catch (error) {
+            console.error("❌ 初期化エラー:", error);
+          }
+        }
+
+        gameLoop() {
+          if (!this.gameState.isRunning) return;
+
+          const currentTime = performance.now();
+          const deltaTime = currentTime - this.lastFrameTime;
+          this.lastFrameTime = currentTime;
+
+          // FPS計算
+          this.frameCount++;
+          if (currentTime - this.fpsUpdateTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.fpsUpdateTime = currentTime;
+          }
+
+          this.update(deltaTime);
+          this.render();
+
+          requestAnimationFrame(() => this.gameLoop());
+        }
+
+        update(deltaTime) {
+          // 入力更新
+          this.inputManager.update();
+          const input = this.inputManager.getPlayerInput();
+
+          // ジャンプ表示タイマー更新
+          if (this.jumpIndicatorTimer > 0) {
+            this.jumpIndicatorTimer -= deltaTime;
+            if (this.jumpIndicatorTimer <= 0) {
+              this.jumpIndicator.classList.add("hidden");
+            }
+          }
+
+          // ゲームモード別処理
+          switch (this.gameState.mode) {
+            case "menu":
+              this.updateMenu(input);
+              break;
+            case "playing":
+              this.updateGameplay(deltaTime, input);
+              break;
+            case "paused":
+              this.updatePaused(input);
+              break;
+          }
+        }
+
+        updateMenu(input) {
+          // メニューでのゲーム開始
+          if (input.jump || input.enter) {
+            console.log("🎮 ゲーム開始！");
+            this.startGame();
+          }
+        }
+
+        updateGameplay(deltaTime, input) {
+          // ポーズチェック
+          if (input.pause) {
+            this.pauseGame();
+            return;
+          }
+
+          // メニューに戻る
+          if (input.escape) {
+            this.returnToMenu();
+            return;
+          }
+
+          // ジャンプ入力の詳細ログ
+          if (input.jump) {
+            console.log("🦘 ジャンプ入力検出！プレイヤー状態:", {
+              position: this.player.position,
+              velocity: this.player.velocity,
+              isOnGround: this.player.isOnGround,
+              state: this.player.state,
+            });
+
+            // ジャンプ表示
+            this.showJumpIndicator();
+          }
+
+          // プレイヤー更新
+          this.player.update(deltaTime, input);
+
+          // 物理更新
+          this.updatePhysics(deltaTime);
+        }
+
+        updatePaused(input) {
+          // ポーズ解除
+          if (input.pause) {
+            this.resumeGame();
+          }
+
+          // メニューに戻る
+          if (input.escape) {
+            this.returnToMenu();
+          }
+        }
+
+        updatePhysics(deltaTime) {
+          // 重力適用
+          this.physicsEngine.applyGravity(this.player, deltaTime);
+
+          // 摩擦適用
+          this.physicsEngine.applyFriction(
+            this.player,
+            deltaTime,
+            this.player.isOnGround
+          );
+
+          // 位置更新
+          this.physicsEngine.updatePosition(this.player, deltaTime);
+
+          // 簡単な地面衝突（ステージシステムが複雑な場合の代替）
+          const groundY = 550;
+          if (this.player.position.y + this.player.size.height >= groundY) {
+            this.player.position.y = groundY - this.player.size.height;
+            this.player.velocity.y = 0;
+            this.player.isOnGround = true;
+          } else {
+            this.player.isOnGround = false;
+          }
+
+          // 画面端制限
+          if (this.player.position.x < 0) {
+            this.player.position.x = 0;
+            this.player.velocity.x = 0;
+          } else if (
+            this.player.position.x + this.player.size.width >
+            this.canvas.width
+          ) {
+            this.player.position.x = this.canvas.width - this.player.size.width;
+            this.player.velocity.x = 0;
+          }
+        }
+
+        render() {
+          // 背景クリア
+          this.ctx.fillStyle = "#5C94FC";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // 地面描画
+          this.ctx.fillStyle = "#8B4513";
+          this.ctx.fillRect(0, 550, this.canvas.width, 50);
+
+          // プラットフォーム描画（デモ用）
+          this.ctx.fillStyle = "#228B22";
+          this.ctx.fillRect(200, 450, 150, 20);
+          this.ctx.fillRect(400, 350, 150, 20);
+          this.ctx.fillRect(600, 250, 150, 20);
+
+          if (this.gameState.mode === "playing") {
+            // プレイヤー描画
+            this.player.render(this.ctx);
+
+            // デバッグ情報描画
+            this.renderDebugInfo();
+          }
+
+          // FPS表示
+          this.ctx.fillStyle = "white";
+          this.ctx.font = "14px Arial";
+          this.ctx.textAlign = "left";
+          this.ctx.fillText(`FPS: ${this.fps}`, 10, 25);
+          this.ctx.fillText(`Mode: ${this.gameState.mode}`, 10, 45);
+
+          if (this.gameState.mode === "playing") {
+            this.ctx.fillText(
+              `Position: ${Math.round(this.player.position.x)}, ${Math.round(
+                this.player.position.y
+              )}`,
+              10,
+              65
+            );
+            this.ctx.fillText(
+              `Velocity: ${Math.round(this.player.velocity.x)}, ${Math.round(
+                this.player.velocity.y
+              )}`,
+              10,
+              85
+            );
+            this.ctx.fillText(
+              `Ground: ${this.player.isOnGround ? "Yes" : "No"}`,
+              10,
+              105
+            );
+            this.ctx.fillText(`State: ${this.player.state}`, 10, 125);
+          }
+
+          // ポーズオーバーレイ
+          if (this.gameState.mode === "paused") {
+            this.ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.fillStyle = "white";
+            this.ctx.font = "32px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(
+              "PAUSED",
+              this.canvas.width / 2,
+              this.canvas.height / 2
+            );
+            this.ctx.font = "16px Arial";
+            this.ctx.fillText(
+              "Press P to resume, ESC for menu",
+              this.canvas.width / 2,
+              this.canvas.height / 2 + 40
+            );
+          }
+        }
+
+        renderDebugInfo() {
+          // ジャンプ軌跡表示
+          if (!this.player.isOnGround) {
+            this.ctx.strokeStyle = "yellow";
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(
+              this.player.position.x + this.player.size.width / 2,
+              this.player.position.y + this.player.size.height / 2,
+              25,
+              0,
+              Math.PI * 2
+            );
+            this.ctx.stroke();
+          }
+        }
+
+        startGame() {
+          this.gameState.mode = "playing";
+          this.instructionsElement.classList.add("hidden");
+          this.hudElement.classList.remove("hidden");
+
+          // プレイヤーをリセット
+          this.player.setPosition(100, 400);
+          this.player.velocity = { x: 0, y: 0 };
+          this.player.isOnGround = true;
+          this.player.state = "idle";
+
+          console.log("🎮 ゲーム開始 - プレイヤー準備完了");
+        }
+
+        pauseGame() {
+          this.gameState.mode = "paused";
+          console.log("⏸️ ゲームポーズ");
+        }
+
+        resumeGame() {
+          this.gameState.mode = "playing";
+          console.log("▶️ ゲーム再開");
+        }
+
+        returnToMenu() {
+          this.gameState.mode = "menu";
+          this.instructionsElement.classList.remove("hidden");
+          this.hudElement.classList.add("hidden");
+          this.jumpIndicator.classList.add("hidden");
+          console.log("🏠 メニューに戻る");
+        }
+
+        showJumpIndicator() {
+          this.jumpIndicator.classList.remove("hidden");
+          this.jumpIndicatorTimer = 1000; // 1秒間表示
+        }
+      }
+
+      // ゲーム開始
+      window.addEventListener("load", () => {
+        console.log("🚀 ページ読み込み完了 - ゲーム初期化中...");
+
+        const game = new FixedGameEngine();
+
+        // グローバルアクセス用
+        window.game = game;
+
+        // デバッグ用コマンド
+        window.debugJump = () => {
+          if (game.inputManager) {
+            const jumpTest = game.inputManager.testAlternativeJumpKeys();
+            console.log("ジャンプキーテスト結果:", jumpTest);
+            return jumpTest;
+          }
+        };
+
+        window.forceJump = () => {
+          if (game.player) {
+            const result = game.player.jump();
+            console.log("強制ジャンプ結果:", result);
+            return result;
+          }
+        };
+
+        console.log("🎮 ゲーム準備完了！");
+        console.log("デバッグコマンド: debugJump(), forceJump()");
+      });
+
+      // エラーハンドリング
+      window.addEventListener("error", (event) => {
+        console.error("❌ JavaScript エラー:", event.error);
+      });
+
+      // フォーカス管理
+      document.addEventListener("click", () => {
+        const canvas = document.getElementById("game-canvas");
+        if (canvas) {
+          canvas.focus();
+        }
+      });
+    </script>
+  </body>
+</html>

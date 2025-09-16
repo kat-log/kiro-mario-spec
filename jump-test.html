@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ジャンプテスト - Mario Style Platformer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+      }
+
+      #game-container {
+        position: relative;
+        background: #000;
+        border: 3px solid #333;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+
+      #game-canvas {
+        display: block;
+        background: #5c94fc;
+        image-rendering: pixelated;
+      }
+
+      #instructions {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-size: 14px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 300px;
+      }
+
+      #debug-info {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: white;
+        font-size: 12px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+      <div id="instructions">
+        <h3>🎮 ジャンプテスト</h3>
+        <p><strong>操作方法:</strong></p>
+        <p>• 左右移動: ←→ または A/D</p>
+        <p>• ジャンプ: スペース または ↑ または W または Enter</p>
+        <p>• ゲーム開始: スペース または Enter</p>
+        <p><strong>赤い四角がプレイヤーです！</strong></p>
+      </div>
+      <div id="debug-info">
+        <div>FPS: <span id="fps">0</span></div>
+        <div>プレイヤー位置: <span id="position">0, 0</span></div>
+        <div>速度: <span id="velocity">0, 0</span></div>
+        <div>地面接触: <span id="ground">false</span></div>
+        <div>状態: <span id="state">idle</span></div>
+        <div>最後の入力: <span id="last-input">なし</span></div>
+      </div>
+    </div>
+
+    <!-- 必要なJavaScriptファイルを読み込み -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+
+    <script>
+      // シンプルなジャンプテスト用のゲームエンジン
+      class SimpleJumpTest {
+        constructor() {
+          this.canvas = document.getElementById("game-canvas");
+          this.ctx = this.canvas.getContext("2d");
+
+          // ゲーム状態
+          this.gameStarted = false;
+          this.lastFrameTime = 0;
+          this.fps = 0;
+          this.frameCount = 0;
+          this.fpsUpdateTime = 0;
+
+          // 入力管理
+          this.inputManager = new InputManager(this.canvas);
+
+          // 物理エンジン
+          this.physicsEngine = new PhysicsEngine();
+
+          // プレイヤー
+          this.player = new Player(100, 400);
+
+          // ステージ（地面）
+          this.stage = new Stage();
+
+          // デバッグ情報更新用の要素
+          this.debugElements = {
+            fps: document.getElementById("fps"),
+            position: document.getElementById("position"),
+            velocity: document.getElementById("velocity"),
+            ground: document.getElementById("ground"),
+            state: document.getElementById("state"),
+            lastInput: document.getElementById("last-input"),
+          };
+
+          // フォーカス確保
+          this.canvas.focus();
+
+          console.log("🎮 ジャンプテスト開始！");
+          console.log("プレイヤー初期位置:", this.player.position);
+          console.log("ジャンプキー設定:", this.inputManager.keyBindings.jump);
+        }
+
+        start() {
+          this.gameLoop();
+        }
+
+        gameLoop() {
+          const currentTime = performance.now();
+          const deltaTime = currentTime - this.lastFrameTime;
+          this.lastFrameTime = currentTime;
+
+          // FPS計算
+          this.frameCount++;
+          if (currentTime - this.fpsUpdateTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.fpsUpdateTime = currentTime;
+          }
+
+          this.update(deltaTime);
+          this.render();
+          this.updateDebugInfo();
+
+          requestAnimationFrame(() => this.gameLoop());
+        }
+
+        update(deltaTime) {
+          // 入力更新
+          this.inputManager.update();
+          const input = this.inputManager.getPlayerInput();
+
+          // ゲーム開始チェック
+          if (!this.gameStarted && (input.jump || input.enter)) {
+            this.gameStarted = true;
+            console.log("🎮 ゲーム開始！");
+            this.debugElements.lastInput.textContent = "ゲーム開始";
+          }
+
+          if (!this.gameStarted) return;
+
+          // 入力ログ
+          if (input.jump) {
+            console.log("🦘 ジャンプ入力検出！");
+            this.debugElements.lastInput.textContent = "ジャンプ";
+          } else if (input.moveLeft) {
+            this.debugElements.lastInput.textContent = "左移動";
+          } else if (input.moveRight) {
+            this.debugElements.lastInput.textContent = "右移動";
+          }
+
+          // プレイヤー更新
+          this.player.update(deltaTime, input);
+
+          // 物理更新
+          this.updatePhysics(deltaTime);
+        }
+
+        updatePhysics(deltaTime) {
+          // 重力適用
+          this.physicsEngine.applyGravity(this.player, deltaTime);
+
+          // 摩擦適用
+          this.physicsEngine.applyFriction(
+            this.player,
+            deltaTime,
+            this.player.isOnGround
+          );
+
+          // 位置更新
+          this.physicsEngine.updatePosition(this.player, deltaTime);
+
+          // 地面との衝突チェック
+          const groundY = 550; // 地面のY座標
+          if (this.player.position.y + this.player.size.height >= groundY) {
+            this.player.position.y = groundY - this.player.size.height;
+            this.player.velocity.y = 0;
+            this.player.isOnGround = true;
+          } else {
+            this.player.isOnGround = false;
+          }
+
+          // 画面端での制限
+          if (this.player.position.x < 0) {
+            this.player.position.x = 0;
+            this.player.velocity.x = 0;
+          } else if (
+            this.player.position.x + this.player.size.width >
+            this.canvas.width
+          ) {
+            this.player.position.x = this.canvas.width - this.player.size.width;
+            this.player.velocity.x = 0;
+          }
+        }
+
+        render() {
+          // 背景クリア
+          this.ctx.fillStyle = "#5C94FC";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // 地面描画
+          this.ctx.fillStyle = "#8B4513";
+          this.ctx.fillRect(0, 550, this.canvas.width, 50);
+
+          if (!this.gameStarted) {
+            // スタート画面
+            this.ctx.fillStyle = "white";
+            this.ctx.font = "32px Arial";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(
+              "スペースキーでスタート！",
+              this.canvas.width / 2,
+              this.canvas.height / 2
+            );
+            this.ctx.font = "16px Arial";
+            this.ctx.fillText(
+              "ジャンプテスト",
+              this.canvas.width / 2,
+              this.canvas.height / 2 + 40
+            );
+          } else {
+            // プレイヤー描画
+            this.player.render(this.ctx);
+
+            // ジャンプ軌跡表示（デバッグ用）
+            if (!this.player.isOnGround) {
+              this.ctx.strokeStyle = "yellow";
+              this.ctx.lineWidth = 2;
+              this.ctx.beginPath();
+              this.ctx.arc(
+                this.player.position.x + this.player.size.width / 2,
+                this.player.position.y + this.player.size.height / 2,
+                20,
+                0,
+                Math.PI * 2
+              );
+              this.ctx.stroke();
+            }
+          }
+        }
+
+        updateDebugInfo() {
+          this.debugElements.fps.textContent = this.fps;
+          this.debugElements.position.textContent = `${Math.round(
+            this.player.position.x
+          )}, ${Math.round(this.player.position.y)}`;
+          this.debugElements.velocity.textContent = `${Math.round(
+            this.player.velocity.x
+          )}, ${Math.round(this.player.velocity.y)}`;
+          this.debugElements.ground.textContent = this.player.isOnGround
+            ? "はい"
+            : "いいえ";
+          this.debugElements.state.textContent = this.player.state;
+        }
+      }
+
+      // テスト開始
+      window.addEventListener("load", () => {
+        const jumpTest = new SimpleJumpTest();
+        jumpTest.start();
+
+        // グローバルアクセス用
+        window.jumpTest = jumpTest;
+
+        console.log("🎮 ジャンプテストが読み込まれました！");
+        console.log("デバッグ用: window.jumpTest でアクセス可能");
+      });
+    </script>
+  </body>
+</html>

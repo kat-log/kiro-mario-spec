@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ジャンプ診断ツール</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f0f0f0;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+      }
+
+      .test-section.success {
+        border-color: #4caf50;
+        background: #f1f8e9;
+      }
+
+      .test-section.error {
+        border-color: #f44336;
+        background: #ffebee;
+      }
+
+      .test-section.warning {
+        border-color: #ff9800;
+        background: #fff3e0;
+      }
+
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+
+      button:hover {
+        background: #1976d2;
+      }
+
+      .key-test {
+        display: inline-block;
+        margin: 5px;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .key-test.pressed {
+        background: #4caf50;
+        color: white;
+        border-color: #4caf50;
+      }
+
+      #log {
+        background: #000;
+        color: #0f0;
+        padding: 10px;
+        border-radius: 5px;
+        height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🦘 ジャンプ診断ツール</h1>
+      <p>このツールでジャンプ機能の問題を診断します。</p>
+
+      <div class="test-section" id="focus-test">
+        <h3>1. フォーカステスト</h3>
+        <p>ページがキーボード入力を受け取れるかテストします。</p>
+        <button onclick="testFocus()">フォーカステスト実行</button>
+        <div id="focus-result"></div>
+      </div>
+
+      <div class="test-section" id="key-test">
+        <h3>2. キー入力テスト</h3>
+        <p>
+          各ジャンプキーが正しく検出されるかテストします。キーを押してみてください：
+        </p>
+        <div id="key-indicators">
+          <div class="key-test" id="key-Space">Space</div>
+          <div class="key-test" id="key-ArrowUp">↑</div>
+          <div class="key-test" id="key-KeyW">W</div>
+          <div class="key-test" id="key-Enter">Enter</div>
+        </div>
+        <div id="key-result"></div>
+      </div>
+
+      <div class="test-section" id="input-manager-test">
+        <h3>3. InputManager テスト</h3>
+        <p>InputManagerが正しく動作するかテストします。</p>
+        <button onclick="testInputManager()">InputManager テスト実行</button>
+        <div id="input-manager-result"></div>
+      </div>
+
+      <div class="test-section" id="player-test">
+        <h3>4. プレイヤージャンプテスト</h3>
+        <p>プレイヤーのジャンプ機能をテストします。</p>
+        <button onclick="testPlayerJump()">プレイヤージャンプテスト実行</button>
+        <div id="player-result"></div>
+      </div>
+
+      <div class="test-section" id="physics-test">
+        <h3>5. 物理エンジンテスト</h3>
+        <p>物理エンジンが正しく動作するかテストします。</p>
+        <button onclick="testPhysics()">物理エンジンテスト実行</button>
+        <div id="physics-result"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>6. リアルタイムログ</h3>
+        <p>キー入力とジャンプイベントをリアルタイムで監視します。</p>
+        <button onclick="startLogging()">ログ開始</button>
+        <button onclick="stopLogging()">ログ停止</button>
+        <button onclick="clearLog()">ログクリア</button>
+        <div id="log"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>7. 総合診断</h3>
+        <button onclick="runFullDiagnostic()">完全診断実行</button>
+        <div id="full-diagnostic-result"></div>
+      </div>
+    </div>
+
+    <!-- 必要なJavaScriptファイルを読み込み -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/player.js"></script>
+
+    <script>
+      let inputManager = null;
+      let player = null;
+      let physicsEngine = null;
+      let loggingActive = false;
+      let logElement = null;
+
+      // 初期化
+      window.addEventListener("load", () => {
+        logElement = document.getElementById("log");
+        log("🔧 診断ツール初期化中...");
+
+        try {
+          // InputManager初期化
+          inputManager = new InputManager();
+          log("✅ InputManager初期化成功");
+
+          // PhysicsEngine初期化
+          physicsEngine = new PhysicsEngine();
+          log("✅ PhysicsEngine初期化成功");
+
+          // Player初期化
+          player = new Player(100, 100);
+          log("✅ Player初期化成功");
+
+          // キー入力監視開始
+          setupKeyMonitoring();
+          log("✅ 診断ツール準備完了");
+        } catch (error) {
+          log("❌ 初期化エラー: " + error.message);
+          console.error("初期化エラー:", error);
+        }
+      });
+
+      function log(message) {
+        if (logElement) {
+          const timestamp = new Date().toLocaleTimeString();
+          logElement.innerHTML += `[${timestamp}] ${message}\n`;
+          logElement.scrollTop = logElement.scrollHeight;
+        }
+        console.log(message);
+      }
+
+      function setupKeyMonitoring() {
+        const jumpKeys = ["Space", "ArrowUp", "KeyW", "Enter"];
+
+        document.addEventListener("keydown", (event) => {
+          if (jumpKeys.includes(event.code)) {
+            const indicator = document.getElementById("key-" + event.code);
+            if (indicator) {
+              indicator.classList.add("pressed");
+            }
+
+            if (loggingActive) {
+              log(`🔽 キー押下: ${event.code}`);
+            }
+          }
+        });
+
+        document.addEventListener("keyup", (event) => {
+          if (jumpKeys.includes(event.code)) {
+            const indicator = document.getElementById("key-" + event.code);
+            if (indicator) {
+              indicator.classList.remove("pressed");
+            }
+
+            if (loggingActive) {
+              log(`🔼 キー離上: ${event.code}`);
+            }
+          }
+        });
+      }
+
+      function testFocus() {
+        const result = document.getElementById("focus-result");
+        const section = document.getElementById("focus-test");
+
+        try {
+          const focusState = {
+            activeElement: document.activeElement.tagName,
+            hasFocus: document.hasFocus(),
+            hidden: document.hidden,
+            visibilityState: document.visibilityState,
+          };
+
+          let status = "✅ 成功";
+          let details = `
+                    <p><strong>フォーカス状態:</strong></p>
+                    <ul>
+                        <li>アクティブ要素: ${focusState.activeElement}</li>
+                        <li>ドキュメントフォーカス: ${focusState.hasFocus}</li>
+                        <li>ページ非表示: ${focusState.hidden}</li>
+                        <li>表示状態: ${focusState.visibilityState}</li>
+                    </ul>
+                `;
+
+          if (!focusState.hasFocus) {
+            status = "⚠️ 警告";
+            details +=
+              "<p><strong>警告:</strong> ページにフォーカスがありません。</p>";
+            section.className = "test-section warning";
+          } else {
+            section.className = "test-section success";
+          }
+
+          result.innerHTML = status + details;
+          log("フォーカステスト完了: " + JSON.stringify(focusState));
+        } catch (error) {
+          result.innerHTML = "❌ エラー: " + error.message;
+          section.className = "test-section error";
+          log("フォーカステストエラー: " + error.message);
+        }
+      }
+
+      function testInputManager() {
+        const result = document.getElementById("input-manager-result");
+        const section = document.getElementById("input-manager-test");
+
+        try {
+          if (!inputManager) {
+            throw new Error("InputManagerが初期化されていません");
+          }
+
+          // InputManagerの状態をテスト
+          const debugInfo = inputManager.getDebugInfo();
+          const jumpKeyTest = inputManager.testAlternativeJumpKeys();
+
+          let status = "✅ 成功";
+          let details = `
+                    <p><strong>InputManager状態:</strong></p>
+                    <ul>
+                        <li>追跡中のキー数: ${debugInfo.totalKeysTracked}</li>
+                        <li>アクティブなアクション: ${
+                          debugInfo.activeActions.join(", ") || "なし"
+                        }</li>
+                        <li>ジャンプキー設定: ${jumpKeyTest.configuredJumpKeys.join(
+                          ", "
+                        )}</li>
+                        <li>フォーカス管理: ${
+                          debugInfo.focusManager ? "有効" : "無効"
+                        }</li>
+                    </ul>
+                `;
+
+          if (jumpKeyTest.configuredJumpKeys.length === 0) {
+            status = "❌ エラー";
+            details +=
+              "<p><strong>エラー:</strong> ジャンプキーが設定されていません。</p>";
+            section.className = "test-section error";
+          } else {
+            section.className = "test-section success";
+          }
+
+          result.innerHTML = status + details;
+          log("InputManagerテスト完了");
+        } catch (error) {
+          result.innerHTML = "❌ エラー: " + error.message;
+          section.className = "test-section error";
+          log("InputManagerテストエラー: " + error.message);
+        }
+      }
+
+      function testPlayerJump() {
+        const result = document.getElementById("player-result");
+        const section = document.getElementById("player-test");
+
+        try {
+          if (!player) {
+            throw new Error("Playerが初期化されていません");
+          }
+
+          // プレイヤーを地面に配置
+          player.position.y = 400;
+          player.velocity.y = 0;
+          player.isOnGround = true;
+
+          // ジャンプ条件をテスト
+          const jumpValidation = player.canJumpEnhanced();
+
+          // ジャンプを実行
+          const jumpResult = player.jump();
+
+          let status = jumpResult ? "✅ 成功" : "❌ 失敗";
+          let details = `
+                    <p><strong>ジャンプテスト結果:</strong></p>
+                    <ul>
+                        <li>ジャンプ実行: ${jumpResult ? "はい" : "いいえ"}</li>
+                        <li>ジャンプ可能: ${
+                          jumpValidation.canJump ? "はい" : "いいえ"
+                        }</li>
+                        <li>地面接触: ${
+                          player.isOnGround ? "はい" : "いいえ"
+                        }</li>
+                        <li>プレイヤー状態: ${player.state}</li>
+                        <li>Y速度: ${player.velocity.y.toFixed(2)}</li>
+                        <li>ジャンプパワー: ${player.jumpPower}</li>
+                    </ul>
+                `;
+
+          if (!jumpResult) {
+            details += `<p><strong>失敗理由:</strong> ${jumpValidation.reason}</p>`;
+            section.className = "test-section error";
+          } else {
+            section.className = "test-section success";
+          }
+
+          result.innerHTML = status + details;
+          log(
+            `プレイヤージャンプテスト: ${jumpResult ? "成功" : "失敗"} - ${
+              jumpValidation.reason
+            }`
+          );
+        } catch (error) {
+          result.innerHTML = "❌ エラー: " + error.message;
+          section.className = "test-section error";
+          log("プレイヤージャンプテストエラー: " + error.message);
+        }
+      }
+
+      function testPhysics() {
+        const result = document.getElementById("physics-result");
+        const section = document.getElementById("physics-test");
+
+        try {
+          if (!physicsEngine || !player) {
+            throw new Error("PhysicsEngineまたはPlayerが初期化されていません");
+          }
+
+          // 物理エンジンのテスト
+          const initialY = player.position.y;
+          const initialVelocityY = player.velocity.y;
+
+          // 重力を適用
+          physicsEngine.applyGravity(player, 16.67); // 60FPSでの1フレーム
+
+          const afterGravityY = player.velocity.y;
+          const gravityApplied = afterGravityY !== initialVelocityY;
+
+          // 位置更新をテスト
+          physicsEngine.updatePosition(player, 16.67);
+
+          const positionUpdated = player.position.y !== initialY;
+
+          let status =
+            gravityApplied && positionUpdated ? "✅ 成功" : "❌ 失敗";
+          let details = `
+                    <p><strong>物理エンジンテスト結果:</strong></p>
+                    <ul>
+                        <li>重力適用: ${gravityApplied ? "はい" : "いいえ"}</li>
+                        <li>位置更新: ${
+                          positionUpdated ? "はい" : "いいえ"
+                        }</li>
+                        <li>初期Y速度: ${initialVelocityY.toFixed(2)}</li>
+                        <li>重力後Y速度: ${afterGravityY.toFixed(2)}</li>
+                        <li>重力値: ${physicsEngine.gravity || "undefined"}</li>
+                    </ul>
+                `;
+
+          if (gravityApplied && positionUpdated) {
+            section.className = "test-section success";
+          } else {
+            section.className = "test-section error";
+          }
+
+          result.innerHTML = status + details;
+          log(
+            `物理エンジンテスト: 重力=${gravityApplied}, 位置更新=${positionUpdated}`
+          );
+        } catch (error) {
+          result.innerHTML = "❌ エラー: " + error.message;
+          section.className = "test-section error";
+          log("物理エンジンテストエラー: " + error.message);
+        }
+      }
+
+      function startLogging() {
+        loggingActive = true;
+        log("📊 リアルタイムログ開始");
+
+        // InputManagerの更新ループを開始
+        if (inputManager) {
+          const logLoop = () => {
+            if (!loggingActive) return;
+
+            inputManager.update();
+            const input = inputManager.getPlayerInput();
+
+            if (input.jump) {
+              log("🦘 ジャンプ入力検出！");
+            }
+
+            requestAnimationFrame(logLoop);
+          };
+          logLoop();
+        }
+      }
+
+      function stopLogging() {
+        loggingActive = false;
+        log("📊 リアルタイムログ停止");
+      }
+
+      function clearLog() {
+        if (logElement) {
+          logElement.innerHTML = "";
+        }
+      }
+
+      function runFullDiagnostic() {
+        const result = document.getElementById("full-diagnostic-result");
+
+        log("🔍 完全診断開始...");
+
+        // 全テストを順次実行
+        setTimeout(() => testFocus(), 100);
+        setTimeout(() => testInputManager(), 200);
+        setTimeout(() => testPlayerJump(), 300);
+        setTimeout(() => testPhysics(), 400);
+
+        setTimeout(() => {
+          const sections = document.querySelectorAll(".test-section");
+          let successCount = 0;
+          let totalCount = 0;
+
+          sections.forEach((section) => {
+            if (section.id.includes("-test")) {
+              totalCount++;
+              if (section.classList.contains("success")) {
+                successCount++;
+              }
+            }
+          });
+
+          const percentage = Math.round((successCount / totalCount) * 100);
+          let status = "";
+          let className = "";
+
+          if (percentage === 100) {
+            status = "✅ 完璧";
+            className = "success";
+          } else if (percentage >= 75) {
+            status = "⚠️ 良好";
+            className = "warning";
+          } else {
+            status = "❌ 問題あり";
+            className = "error";
+          }
+
+          result.innerHTML = `
+                    <h4>${status} - 診断完了</h4>
+                    <p>成功率: ${percentage}% (${successCount}/${totalCount})</p>
+                    <p>詳細は各セクションを確認してください。</p>
+                `;
+
+          result.parentElement.className = "test-section " + className;
+          log(
+            `🔍 完全診断完了: ${percentage}% (${successCount}/${totalCount})`
+          );
+        }, 600);
+      }
+    </script>
+  </body>
+</html>

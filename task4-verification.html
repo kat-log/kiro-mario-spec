@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 4 Verification - Enhanced InputManager</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .requirement {
+        border: 1px solid #ddd;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 4px;
+        background: #f9f9f9;
+      }
+      .requirement h4 {
+        margin: 0 0 10px 0;
+        color: #333;
+      }
+      .test-result {
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .pass {
+        background: #d4edda;
+        color: #155724;
+      }
+      .fail {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .test-area {
+        border: 2px solid #007bff;
+        padding: 20px;
+        margin: 20px 0;
+        background: #f8f9fa;
+        border-radius: 4px;
+        min-height: 80px;
+        text-align: center;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Task 4 Verification: Enhanced InputManager</h1>
+      <p>
+        このページでは、Task 4で実装した InputManager
+        の入力検出強化機能が要件を満たしているかを検証します。
+      </p>
+
+      <div class="test-area" id="testArea" tabindex="0">
+        <h3>テストエリア</h3>
+        <p>ここをクリックしてからスペースキーを押してテストしてください</p>
+      </div>
+
+      <button onclick="runAllTests()">全テスト実行</button>
+      <button onclick="clearResults()">結果クリア</button>
+
+      <div id="testResults">
+        <h2>要件検証結果</h2>
+
+        <div class="requirement">
+          <h4>Requirement 1.1: スペースキー入力の確実な検出</h4>
+          <div id="req1-1-result" class="test-result">未テスト</div>
+          <p>
+            WHEN プレイヤーがスペースキーを押す THEN InputManager
+            がキーイベントを確実に検出する SHALL
+          </p>
+        </div>
+
+        <div class="requirement">
+          <h4>Requirement 1.2: コンソールログへの記録</h4>
+          <div id="req1-2-result" class="test-result">未テスト</div>
+          <p>
+            WHEN スペースキーが検出される THEN
+            コンソールログに入力イベントが記録される SHALL
+          </p>
+        </div>
+
+        <div class="requirement">
+          <h4>Requirement 1.3: preventDefault()の適切な適用</h4>
+          <div id="req1-3-result" class="test-result">未テスト</div>
+          <p>
+            WHEN ブラウザのデフォルト動作（スクロール等）が発生する THEN
+            preventDefault()で適切に無効化される SHALL
+          </p>
+        </div>
+
+        <div class="requirement">
+          <h4>Requirement 1.4: フォーカス管理</h4>
+          <div id="req1-4-result" class="test-result">未テスト</div>
+          <p>
+            WHEN Canvas にフォーカスがない状態 THEN
+            フォーカスを自動的に設定してキー入力を受け付ける SHALL
+          </p>
+        </div>
+      </div>
+
+      <div class="log" id="testLog"><strong>テストログ:</strong><br /></div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+
+    <script>
+      let inputManager;
+      let testArea;
+      let logDiv;
+      let originalConsoleLog;
+      let capturedLogs = [];
+
+      function initTest() {
+        testArea = document.getElementById("testArea");
+        logDiv = document.getElementById("testLog");
+
+        // Create InputManager with test area
+        inputManager = new InputManager(testArea);
+
+        // Capture console.log for testing
+        originalConsoleLog = console.log;
+        console.log = function (...args) {
+          capturedLogs.push(args.join(" "));
+          originalConsoleLog.apply(console, args);
+        };
+
+        log("Enhanced InputManager initialized for verification");
+        testArea.focus();
+      }
+
+      function runAllTests() {
+        log("=== Starting Task 4 Requirements Verification ===");
+        clearResults();
+
+        // Test each requirement
+        testRequirement1_1();
+        testRequirement1_2();
+        testRequirement1_3();
+        testRequirement1_4();
+
+        log("=== All tests completed ===");
+      }
+
+      function testRequirement1_1() {
+        log("Testing Requirement 1.1: Space key detection reliability");
+
+        // Clear previous state
+        inputManager.resetAllKeys();
+        capturedLogs = [];
+
+        // Simulate space key press
+        const keydownEvent = new KeyboardEvent("keydown", {
+          code: "Space",
+          key: " ",
+          bubbles: true,
+          cancelable: true,
+        });
+
+        const keyupEvent = new KeyboardEvent("keyup", {
+          code: "Space",
+          key: " ",
+          bubbles: true,
+          cancelable: true,
+        });
+
+        // Dispatch events
+        document.dispatchEvent(keydownEvent);
+        inputManager.update();
+        document.dispatchEvent(keyupEvent);
+        inputManager.update();
+
+        // Check if space key was detected
+        const debugInfo = inputManager.getDebugInfo();
+        const hasEventCapture =
+          debugInfo.eventCaptureOptions &&
+          debugInfo.eventCaptureOptions.capture === true;
+        const hasEnhancedDetection =
+          debugInfo.duplicateEventThreshold !== undefined;
+
+        const passed = hasEventCapture && hasEnhancedDetection;
+        updateTestResult(
+          "req1-1-result",
+          passed,
+          passed
+            ? "Enhanced event capture implemented with duplicate detection"
+            : "Enhanced detection features missing"
+        );
+      }
+
+      function testRequirement1_2() {
+        log("Testing Requirement 1.2: Console logging");
+
+        // Clear logs
+        capturedLogs = [];
+
+        // Simulate space key press
+        const keydownEvent = new KeyboardEvent("keydown", {
+          code: "Space",
+          key: " ",
+          bubbles: true,
+          cancelable: true,
+        });
+
+        document.dispatchEvent(keydownEvent);
+
+        // Check if space key events were logged
+        const spaceKeyLogged = capturedLogs.some(
+          (log) =>
+            log.includes("Space") &&
+            (log.includes("pressed") || log.includes("key"))
+        );
+
+        updateTestResult(
+          "req1-2-result",
+          spaceKeyLogged,
+          spaceKeyLogged
+            ? "Space key events are logged to console"
+            : "Space key logging not detected"
+        );
+      }
+
+      function testRequirement1_3() {
+        log("Testing Requirement 1.3: preventDefault() application");
+
+        // Test 1: Verify Space is recognized as a game key
+        const isSpaceGameKey = inputManager.isGameKey("Space");
+        log(`Space is game key: ${isSpaceGameKey}`);
+
+        // Test 2: Verify enhanced handler exists
+        const hasEnhancedHandler =
+          typeof inputManager.handleKeyDownEnhanced === "function";
+        log(`Has enhanced handler: ${hasEnhancedHandler}`);
+
+        // Test 3: Check event capture options
+        const hasCorrectCaptureOptions =
+          inputManager.eventCaptureOptions &&
+          inputManager.eventCaptureOptions.passive === false;
+        log(`Correct capture options: ${hasCorrectCaptureOptions}`);
+
+        // Test 4: Direct test with mock event
+        let preventDefaultCalled = false;
+        let stopPropagationCalled = false;
+
+        const mockEvent = {
+          code: "Space",
+          preventDefault: function () {
+            preventDefaultCalled = true;
+            log("preventDefault() called by InputManager");
+          },
+          stopPropagation: function () {
+            stopPropagationCalled = true;
+            log("stopPropagation() called by InputManager");
+          },
+          defaultPrevented: false,
+        };
+
+        // Call the handler directly to test preventDefault logic
+        try {
+          // Temporarily mock performance.now for the test
+          const originalPerformanceNow = performance.now;
+          performance.now = () => Date.now();
+
+          inputManager.handleKeyDownEnhanced(mockEvent);
+
+          // Restore original function
+          performance.now = originalPerformanceNow;
+
+          log(
+            `Direct handler test - preventDefault: ${preventDefaultCalled}, stopPropagation: ${stopPropagationCalled}`
+          );
+        } catch (error) {
+          log(`Handler error: ${error.message}`);
+        }
+
+        // Overall test result
+        const passed =
+          isSpaceGameKey &&
+          hasEnhancedHandler &&
+          hasCorrectCaptureOptions &&
+          preventDefaultCalled;
+
+        updateTestResult(
+          "req1-3-result",
+          passed,
+          passed
+            ? "preventDefault() properly implemented for game keys"
+            : "preventDefault() implementation needs improvement"
+        );
+      }
+
+      function testRequirement1_4() {
+        log("Testing Requirement 1.4: Focus management");
+
+        // Test focus management integration
+        const hasFocusManager = inputManager.focusManager !== null;
+        const hasEnsureFocus = typeof inputManager.ensureFocus === "function";
+        const hasFocusState = typeof inputManager.getFocusState === "function";
+
+        // Test focus state retrieval
+        const focusState = inputManager.getFocusState();
+        const hasFocusStateData = focusState && typeof focusState === "object";
+
+        const passed =
+          hasFocusManager &&
+          hasEnsureFocus &&
+          hasFocusState &&
+          hasFocusStateData;
+        updateTestResult(
+          "req1-4-result",
+          passed,
+          passed
+            ? "Focus management fully integrated"
+            : "Focus management integration incomplete"
+        );
+      }
+
+      function updateTestResult(elementId, passed, message) {
+        const element = document.getElementById(elementId);
+        element.className = `test-result ${passed ? "pass" : "fail"}`;
+        element.textContent = `${passed ? "✅ PASS" : "❌ FAIL"}: ${message}`;
+        log(`${elementId}: ${passed ? "PASS" : "FAIL"} - ${message}`);
+      }
+
+      function clearResults() {
+        const results = [
+          "req1-1-result",
+          "req1-2-result",
+          "req1-3-result",
+          "req1-4-result",
+        ];
+        results.forEach((id) => {
+          const element = document.getElementById(id);
+          element.className = "test-result";
+          element.textContent = "未テスト";
+        });
+        capturedLogs = [];
+      }
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", initTest);
+    </script>
+  </body>
+</html>

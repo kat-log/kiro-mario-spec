@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Browser Compatibility Layer Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .status {
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+        display: inline-block;
+        margin: 5px 0;
+      }
+      .status.pass {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .status.fail {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .status.warning {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+      .browser-info {
+        background-color: #e7f3ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .test-results {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .recommendations {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      button {
+        background-color: #5c94fc;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #4a7bc8;
+      }
+      .log-output {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 10px 0;
+      }
+      .key-test-area {
+        background-color: #f0f8ff;
+        border: 2px dashed #5c94fc;
+        padding: 20px;
+        text-align: center;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .key-test-area:focus {
+        outline: 2px solid #5c94fc;
+        background-color: #e6f3ff;
+      }
+      .touch-controls {
+        display: none;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .touch-controls.visible {
+        display: block;
+      }
+      .details {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-left: 4px solid #5c94fc;
+      }
+      .issues {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #fff5f5;
+        border-left: 4px solid #e53e3e;
+      }
+      .quirks {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #fffaf0;
+        border-left: 4px solid #dd6b20;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🌐 Browser Compatibility Layer Test</h1>
+      <p>
+        このテストページは、ブラウザ互換性レイヤーの機能をテストし、スペースキー入力の問題を診断します。
+      </p>
+
+      <!-- Browser Information -->
+      <div class="test-section">
+        <h3>📋 Browser Information</h3>
+        <div id="browser-info" class="browser-info">
+          <p>Loading browser information...</p>
+        </div>
+      </div>
+
+      <!-- Compatibility Tests -->
+      <div class="test-section">
+        <h3>🧪 Compatibility Tests</h3>
+        <button onclick="runCompatibilityTests()">Run All Tests</button>
+        <button onclick="runKeyboardTest()">Test Keyboard Events</button>
+        <button onclick="runFocusTest()">Test Focus Management</button>
+        <button onclick="runTouchTest()">Test Touch Support</button>
+        <div id="test-results" class="test-results">
+          <p>Click "Run All Tests" to start compatibility testing.</p>
+        </div>
+      </div>
+
+      <!-- Key Event Testing -->
+      <div class="test-section">
+        <h3>⌨️ Key Event Testing</h3>
+        <div class="key-test-area" id="key-test-area" tabindex="0">
+          <p><strong>Click here and press SPACE key to test</strong></p>
+          <p>Focus this area and press the space key to test event handling</p>
+        </div>
+        <div id="key-event-log" class="log-output">
+          Key events will appear here...
+        </div>
+        <button onclick="clearKeyLog()">Clear Log</button>
+        <button onclick="simulateSpaceKey()">Simulate Space Key</button>
+      </div>
+
+      <!-- Touch Controls Test -->
+      <div class="test-section">
+        <h3>📱 Touch Controls Test</h3>
+        <button onclick="toggleTouchControls()">Toggle Touch Controls</button>
+        <div id="touch-controls-info">
+          <p>Touch controls will be shown if supported by your device.</p>
+        </div>
+      </div>
+
+      <!-- Browser Quirks and Fixes -->
+      <div class="test-section">
+        <h3>🔧 Browser Quirks and Fixes</h3>
+        <div id="quirks-info" class="quirks">
+          <p>Loading browser quirks information...</p>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="test-section">
+        <h3>💡 Recommendations</h3>
+        <div id="recommendations" class="recommendations">
+          <p>Run compatibility tests to get recommendations.</p>
+        </div>
+      </div>
+
+      <!-- Performance Test -->
+      <div class="test-section">
+        <h3>⚡ Performance Test</h3>
+        <button onclick="runPerformanceTest()">Run Performance Test</button>
+        <div id="performance-results" class="test-results">
+          <p>
+            Click "Run Performance Test" to test input handling performance.
+          </p>
+        </div>
+      </div>
+
+      <!-- Debug Log -->
+      <div class="test-section">
+        <h3>🐛 Debug Log</h3>
+        <div id="debug-log" class="log-output">
+          Debug information will appear here...
+        </div>
+        <button onclick="clearDebugLog()">Clear Debug Log</button>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/compatibility-layer.js"></script>
+    <script>
+      let compatibilityLayer;
+      let keyEventCount = 0;
+      let touchControlsVisible = false;
+
+      // Initialize compatibility layer
+      function initializeCompatibilityLayer() {
+        try {
+          compatibilityLayer = new CompatibilityLayer();
+          displayBrowserInfo();
+          displayQuirksInfo();
+          setupKeyEventTesting();
+          logDebug("CompatibilityLayer initialized successfully");
+        } catch (error) {
+          logDebug("Error initializing CompatibilityLayer: " + error.message);
+        }
+      }
+
+      // Display browser information
+      function displayBrowserInfo() {
+        const browserInfo = compatibilityLayer.browserInfo;
+        const infoHtml = `
+                <p><strong>Browser:</strong> ${browserInfo.name} ${
+          browserInfo.version
+        }</p>
+                <p><strong>Engine:</strong> ${browserInfo.engine}</p>
+                <p><strong>Platform:</strong> ${browserInfo.platform}</p>
+                <p><strong>User Agent:</strong> ${browserInfo.userAgent}</p>
+                <p><strong>Mobile:</strong> ${
+                  browserInfo.isMobile ? "Yes" : "No"
+                }</p>
+                <p><strong>Touch:</strong> ${
+                  browserInfo.isTouch ? "Yes" : "No"
+                }</p>
+            `;
+        document.getElementById("browser-info").innerHTML = infoHtml;
+      }
+
+      // Display quirks information
+      function displayQuirksInfo() {
+        const quirks = compatibilityLayer.quirks;
+        const fixes = Array.from(compatibilityLayer.fixes.entries());
+
+        let quirksHtml = `
+                <h4>Known Issues:</h4>
+                <ul>
+                    ${quirks.issues
+                      .map((issue) => `<li>${issue}</li>`)
+                      .join("")}
+                </ul>
+                <h4>Applied Fixes:</h4>
+                <ul>
+                    ${fixes
+                      .map(
+                        ([fix, enabled]) =>
+                          `<li>${fix}: ${enabled ? "Enabled" : "Disabled"}</li>`
+                      )
+                      .join("")}
+                </ul>
+                <h4>Browser Characteristics:</h4>
+                <ul>
+                    <li>Key Event Timing: ${quirks.keyEventTiming}</li>
+                    <li>PreventDefault Required: ${
+                      quirks.preventDefaultRequired ? "Yes" : "No"
+                    }</li>
+                    <li>Focus Issues: ${quirks.focusIssues ? "Yes" : "No"}</li>
+                    <li>Touch Support: ${
+                      quirks.touchSupport ? "Yes" : "No"
+                    }</li>
+                </ul>
+            `;
+
+        document.getElementById("quirks-info").innerHTML = quirksHtml;
+      }
+
+      // Setup key event testing
+      function setupKeyEventTesting() {
+        const testArea = document.getElementById("key-test-area");
+
+        testArea.addEventListener("keydown", (event) => {
+          keyEventCount++;
+          const normalizedEvent = compatibilityLayer.normalizeKeyEvent(event);
+          const fixes = compatibilityLayer.applyBrowserFixes(event);
+
+          logKeyEvent("keydown", normalizedEvent, fixes);
+
+          if (compatibilityLayer.isSpaceKey(event)) {
+            logKeyEvent("SPACE KEY DETECTED", normalizedEvent, fixes);
+          }
+        });
+
+        testArea.addEventListener("keyup", (event) => {
+          const normalizedEvent = compatibilityLayer.normalizeKeyEvent(event);
+          logKeyEvent("keyup", normalizedEvent, []);
+        });
+
+        // Listen for compatibility events
+        document.addEventListener("compatibilityJump", (event) => {
+          logKeyEvent("COMPATIBILITY JUMP", event.detail, []);
+        });
+
+        document.addEventListener("compatibilityMove", (event) => {
+          logKeyEvent("COMPATIBILITY MOVE", event.detail, []);
+        });
+      }
+
+      // Log key events
+      function logKeyEvent(type, event, fixes) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${type}: key="${
+          event.key || event.direction
+        }" code="${event.code || "N/A"}" keyCode="${
+          event.keyCode || "N/A"
+        }" fixes=[${fixes.join(", ")}]`;
+
+        const logElement = document.getElementById("key-event-log");
+        logElement.innerHTML += logEntry + "\n";
+        logElement.scrollTop = logElement.scrollHeight;
+
+        logDebug(logEntry);
+      }
+
+      // Run compatibility tests
+      function runCompatibilityTests() {
+        logDebug("Running compatibility tests...");
+
+        const results = compatibilityLayer.testBrowserCompatibility();
+        displayTestResults(results);
+        displayRecommendations(results.recommendations);
+
+        logDebug("Compatibility tests completed");
+      }
+
+      // Display test results
+      function displayTestResults(results) {
+        let resultsHtml = `
+                <h4>Overall Compatibility: <span class="status ${
+                  results.overall ? "pass" : "fail"
+                }">${results.overall ? "PASS" : "FAIL"}</span></h4>
+            `;
+
+        Object.entries(results.tests).forEach(([testName, test]) => {
+          resultsHtml += `
+                    <div class="details">
+                        <h5>${test.name}: <span class="status ${
+            test.passed ? "pass" : "fail"
+          }">${test.passed ? "PASS" : "FAIL"}</span></h5>
+                        <p><strong>Details:</strong> ${JSON.stringify(
+                          test.details,
+                          null,
+                          2
+                        )}</p>
+                        ${
+                          test.issues.length > 0
+                            ? `<div class="issues"><strong>Issues:</strong><ul>${test.issues
+                                .map((issue) => `<li>${issue}</li>`)
+                                .join("")}</ul></div>`
+                            : ""
+                        }
+                    </div>
+                `;
+        });
+
+        document.getElementById("test-results").innerHTML = resultsHtml;
+      }
+
+      // Display recommendations
+      function displayRecommendations(recommendations) {
+        if (recommendations.length === 0) {
+          document.getElementById("recommendations").innerHTML =
+            "<p>No specific recommendations at this time.</p>";
+          return;
+        }
+
+        const recommendationsHtml = `
+                <h4>Recommendations:</h4>
+                <ul>
+                    ${recommendations.map((rec) => `<li>${rec}</li>`).join("")}
+                </ul>
+            `;
+
+        document.getElementById("recommendations").innerHTML =
+          recommendationsHtml;
+      }
+
+      // Run individual tests
+      function runKeyboardTest() {
+        const test = compatibilityLayer.testKeyboardEvents();
+        logDebug("Keyboard test result: " + JSON.stringify(test));
+        alert(
+          `Keyboard Events Test: ${
+            test.passed ? "PASS" : "FAIL"
+          }\nIssues: ${test.issues.join(", ")}`
+        );
+      }
+
+      function runFocusTest() {
+        const test = compatibilityLayer.testFocusManagement();
+        logDebug("Focus test result: " + JSON.stringify(test));
+        alert(
+          `Focus Management Test: ${
+            test.passed ? "PASS" : "FAIL"
+          }\nIssues: ${test.issues.join(", ")}`
+        );
+      }
+
+      function runTouchTest() {
+        const test = compatibilityLayer.testTouchSupport();
+        logDebug("Touch test result: " + JSON.stringify(test));
+        alert(
+          `Touch Support Test: ${
+            test.passed ? "PASS" : "FAIL"
+          }\nIssues: ${test.issues.join(", ")}`
+        );
+      }
+
+      // Toggle touch controls
+      function toggleTouchControls() {
+        if (!touchControlsVisible) {
+          const controls = compatibilityLayer.setupOnScreenControls();
+          if (controls) {
+            touchControlsVisible = true;
+            document.getElementById("touch-controls-info").innerHTML =
+              '<p class="status pass">Touch controls are now visible on screen</p>';
+            logDebug("Touch controls enabled");
+          } else {
+            document.getElementById("touch-controls-info").innerHTML =
+              '<p class="status fail">Touch controls not supported on this device</p>';
+            logDebug("Touch controls not supported");
+          }
+        } else {
+          // Remove existing controls
+          const jumpButton = document.querySelector(
+            'button[style*="position: fixed"][style*="bottom: 20px"][style*="right: 20px"]'
+          );
+          const moveContainer = document.querySelector(
+            'div[style*="position: fixed"][style*="bottom: 20px"][style*="left: 20px"]'
+          );
+
+          if (jumpButton) jumpButton.remove();
+          if (moveContainer) moveContainer.remove();
+
+          touchControlsVisible = false;
+          document.getElementById("touch-controls-info").innerHTML =
+            "<p>Touch controls removed</p>";
+          logDebug("Touch controls disabled");
+        }
+      }
+
+      // Simulate space key press
+      function simulateSpaceKey() {
+        const testArea = document.getElementById("key-test-area");
+        testArea.focus();
+
+        const spaceEvent = new KeyboardEvent("keydown", {
+          key: " ",
+          code: "Space",
+          keyCode: 32,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        testArea.dispatchEvent(spaceEvent);
+        logDebug("Simulated space key press");
+      }
+
+      // Run performance test
+      function runPerformanceTest() {
+        logDebug("Running performance test...");
+
+        const iterations = 1000;
+        const times = [];
+
+        for (let i = 0; i < iterations; i++) {
+          const start = performance.now();
+
+          // Simulate key event processing
+          const testEvent = new KeyboardEvent("keydown", {
+            key: " ",
+            code: "Space",
+            keyCode: 32,
+          });
+
+          const normalizedEvent =
+            compatibilityLayer.normalizeKeyEvent(testEvent);
+          const fixes = compatibilityLayer.applyBrowserFixes(testEvent);
+
+          const end = performance.now();
+          times.push(end - start);
+        }
+
+        const avgTime =
+          times.reduce((sum, time) => sum + time, 0) / times.length;
+        const maxTime = Math.max(...times);
+        const minTime = Math.min(...times);
+
+        const resultsHtml = `
+                <h4>Performance Test Results (${iterations} iterations):</h4>
+                <p><strong>Average Processing Time:</strong> ${avgTime.toFixed(
+                  3
+                )}ms</p>
+                <p><strong>Maximum Processing Time:</strong> ${maxTime.toFixed(
+                  3
+                )}ms</p>
+                <p><strong>Minimum Processing Time:</strong> ${minTime.toFixed(
+                  3
+                )}ms</p>
+                <p><strong>Performance Level:</strong> <span class="status ${
+                  avgTime < 1 ? "pass" : avgTime < 5 ? "warning" : "fail"
+                }">${
+          avgTime < 1 ? "Excellent" : avgTime < 5 ? "Good" : "Poor"
+        }</span></p>
+            `;
+
+        document.getElementById("performance-results").innerHTML = resultsHtml;
+        logDebug(`Performance test completed: avg=${avgTime.toFixed(3)}ms`);
+      }
+
+      // Utility functions
+      function clearKeyLog() {
+        document.getElementById("key-event-log").innerHTML =
+          "Key events will appear here...\n";
+      }
+
+      function clearDebugLog() {
+        document.getElementById("debug-log").innerHTML =
+          "Debug information will appear here...\n";
+      }
+
+      function logDebug(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${message}`;
+
+        const debugLog = document.getElementById("debug-log");
+        debugLog.innerHTML += logEntry + "\n";
+        debugLog.scrollTop = debugLog.scrollHeight;
+
+        console.log(logEntry);
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        initializeCompatibilityLayer();
+        logDebug("Browser Compatibility Layer Test page loaded");
+      });
+
+      // Handle page focus/blur for testing
+      window.addEventListener("focus", () => {
+        logDebug("Window gained focus");
+      });
+
+      window.addEventListener("blur", () => {
+        logDebug("Window lost focus");
+      });
+    </script>
+  </body>
+</html>

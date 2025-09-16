@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fallback Input System Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .test-section {
+        background: white;
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-section h2 {
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-success {
+        background: #28a745;
+      }
+      .status-warning {
+        background: #ffc107;
+      }
+      .status-error {
+        background: #dc3545;
+      }
+
+      .test-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+        font-size: 14px;
+      }
+
+      .test-button:hover {
+        background: #0056b3;
+      }
+
+      .test-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .log-output {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .input-demo {
+        background: #e9ecef;
+        border: 2px solid #ced4da;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .input-status {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+      }
+
+      .input-indicator {
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        min-width: 100px;
+      }
+
+      .input-active {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .input-inactive {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      canvas {
+        border: 2px solid #333;
+        background: #87ceeb;
+        display: block;
+        margin: 20px auto;
+      }
+
+      .instructions {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+
+      .instructions h3 {
+        margin-top: 0;
+        color: #0c5460;
+      }
+
+      .key-test {
+        display: inline-block;
+        margin: 5px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+
+      .key-test.active {
+        background: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎮 Fallback Input System Test</h1>
+
+      <div class="test-section">
+        <h2>System Status</h2>
+        <div id="system-status">
+          <p>
+            <span class="status-indicator status-warning"></span>Initializing...
+          </p>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Input Testing Canvas</h2>
+        <div class="instructions">
+          <h3>Test Instructions:</h3>
+          <ul>
+            <li>
+              <strong>Keyboard:</strong> Try SPACE, ↑ (Up Arrow), W, ENTER for
+              jump
+            </li>
+            <li><strong>Movement:</strong> Try ← → (Arrow keys) or A D keys</li>
+            <li>
+              <strong>Touch:</strong> Use on-screen buttons or double-tap canvas
+            </li>
+            <li><strong>Help:</strong> Press H to toggle help overlay</li>
+          </ul>
+        </div>
+
+        <canvas id="test-canvas" width="800" height="400"></canvas>
+
+        <div class="input-status">
+          <div id="jump-status" class="input-indicator input-inactive">
+            Jump: OFF
+          </div>
+          <div id="left-status" class="input-indicator input-inactive">
+            Left: OFF
+          </div>
+          <div id="right-status" class="input-indicator input-inactive">
+            Right: OFF
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Alternative Key Testing</h2>
+        <p>Press any of these keys to test alternative input:</p>
+        <div id="key-indicators">
+          <div class="key-test" data-key="Space">SPACE</div>
+          <div class="key-test" data-key="ArrowUp">↑ UP</div>
+          <div class="key-test" data-key="KeyW">W</div>
+          <div class="key-test" data-key="Enter">ENTER</div>
+          <div class="key-test" data-key="ArrowLeft">← LEFT</div>
+          <div class="key-test" data-key="ArrowRight">→ RIGHT</div>
+          <div class="key-test" data-key="KeyA">A</div>
+          <div class="key-test" data-key="KeyD">D</div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Test Controls</h2>
+        <button class="test-button" onclick="runAlternativeInputTest()">
+          Test Alternative Inputs
+        </button>
+        <button class="test-button" onclick="testUpArrowJump()">
+          Test Up Arrow Jump
+        </button>
+        <button class="test-button" onclick="testTouchControls()">
+          Test Touch Controls
+        </button>
+        <button class="test-button" onclick="toggleOnScreenControls()">
+          Toggle On-Screen Controls
+        </button>
+        <button class="test-button" onclick="simulateDoubleTouch()">
+          Simulate Double Touch
+        </button>
+        <button class="test-button" onclick="clearLog()">Clear Log</button>
+      </div>
+
+      <div class="test-section">
+        <h2>Test Log</h2>
+        <div id="test-log" class="log-output">
+          Initializing test environment...\n
+        </div>
+      </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="js/input-manager.js"></script>
+    <script src="js/focus-manager.js"></script>
+    <script src="js/compatibility-layer.js"></script>
+    <script src="js/enhanced-input-manager.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+
+    <script>
+      // Test environment setup
+      let gameEngine, fallbackInputSystem, testCanvas, testCtx;
+      let inputStates = {
+        jump: false,
+        moveLeft: false,
+        moveRight: false,
+      };
+
+      // Initialize test environment
+      function initTest() {
+        log("Initializing fallback input system test...");
+
+        // Get canvas and context
+        testCanvas = document.getElementById("test-canvas");
+        testCtx = testCanvas.getContext("2d");
+
+        // Create mock game engine
+        gameEngine = {
+          canvas: testCanvas,
+          inputManager: new InputManager(testCanvas),
+        };
+
+        // Initialize fallback input system
+        try {
+          fallbackInputSystem = new FallbackInputSystem(gameEngine);
+          log("✅ FallbackInputSystem initialized successfully");
+          updateSystemStatus("success", "Fallback Input System Ready");
+        } catch (error) {
+          log("❌ Failed to initialize FallbackInputSystem: " + error.message);
+          updateSystemStatus(
+            "error",
+            "Initialization Failed: " + error.message
+          );
+          return;
+        }
+
+        // Setup input monitoring
+        setupInputMonitoring();
+
+        // Setup canvas rendering
+        setupCanvasRendering();
+
+        // Setup key indicators
+        setupKeyIndicators();
+
+        log("🎮 Test environment ready!");
+        log(
+          "Touch support: " +
+            (fallbackInputSystem.touchSupported ? "YES" : "NO")
+        );
+        log(
+          "On-screen controls: " +
+            (fallbackInputSystem.settings.showOnScreenControls
+              ? "ENABLED"
+              : "DISABLED")
+        );
+      }
+
+      // Setup input monitoring
+      function setupInputMonitoring() {
+        // Monitor input changes
+        setInterval(() => {
+          if (!gameEngine.inputManager) return;
+
+          const input = gameEngine.inputManager.getPlayerInput();
+
+          // Update input states
+          updateInputState("jump", input.jump);
+          updateInputState("moveLeft", input.moveLeft);
+          updateInputState("moveRight", input.moveRight);
+
+          // Update input manager
+          gameEngine.inputManager.update();
+        }, 16); // ~60fps
+
+        // Listen for fallback events
+        document.addEventListener("fallbackJump", (e) => {
+          log(
+            `🚀 Fallback jump event: ${
+              e.detail.pressed ? "PRESSED" : "RELEASED"
+            } (source: ${e.detail.source})`
+          );
+        });
+
+        document.addEventListener("fallbackMove", (e) => {
+          log(
+            `🏃 Fallback move event: ${e.detail.direction} ${
+              e.detail.pressed ? "PRESSED" : "RELEASED"
+            } (source: ${e.detail.source})`
+          );
+        });
+      }
+
+      // Setup canvas rendering
+      function setupCanvasRendering() {
+        function render() {
+          // Clear canvas
+          testCtx.fillStyle = "#87CEEB";
+          testCtx.fillRect(0, 0, testCanvas.width, testCanvas.height);
+
+          // Draw ground
+          testCtx.fillStyle = "#8B4513";
+          testCtx.fillRect(0, testCanvas.height - 50, testCanvas.width, 50);
+
+          // Draw player (simple rectangle)
+          const playerX = testCanvas.width / 2 - 25;
+          const playerY = testCanvas.height - 100;
+
+          // Player color based on input
+          if (inputStates.jump) {
+            testCtx.fillStyle = "#FFD700"; // Gold when jumping
+          } else if (inputStates.moveLeft || inputStates.moveRight) {
+            testCtx.fillStyle = "#00FF00"; // Green when moving
+          } else {
+            testCtx.fillStyle = "#FF0000"; // Red when idle
+          }
+
+          testCtx.fillRect(playerX, playerY, 50, 50);
+
+          // Draw input indicators on canvas
+          testCtx.fillStyle = "#000";
+          testCtx.font = "16px Arial";
+          testCtx.textAlign = "left";
+
+          let y = 30;
+          testCtx.fillText(
+            `Jump: ${inputStates.jump ? "ACTIVE" : "inactive"}`,
+            20,
+            y
+          );
+          y += 25;
+          testCtx.fillText(
+            `Move Left: ${inputStates.moveLeft ? "ACTIVE" : "inactive"}`,
+            20,
+            y
+          );
+          y += 25;
+          testCtx.fillText(
+            `Move Right: ${inputStates.moveRight ? "ACTIVE" : "inactive"}`,
+            20,
+            y
+          );
+
+          requestAnimationFrame(render);
+        }
+
+        render();
+      }
+
+      // Setup key indicators
+      function setupKeyIndicators() {
+        const keyIndicators = document.querySelectorAll(".key-test");
+
+        // Monitor key presses
+        document.addEventListener("keydown", (e) => {
+          const indicator = document.querySelector(`[data-key="${e.code}"]`);
+          if (indicator) {
+            indicator.classList.add("active");
+            log(`🔑 Key pressed: ${e.code} (${e.key})`);
+          }
+        });
+
+        document.addEventListener("keyup", (e) => {
+          const indicator = document.querySelector(`[data-key="${e.code}"]`);
+          if (indicator) {
+            indicator.classList.remove("active");
+            log(`🔑 Key released: ${e.code} (${e.key})`);
+          }
+        });
+      }
+
+      // Update input state and UI
+      function updateInputState(action, active) {
+        if (inputStates[action] !== active) {
+          inputStates[action] = active;
+
+          const statusElement = document.getElementById(
+            action === "moveLeft"
+              ? "left-status"
+              : action === "moveRight"
+              ? "right-status"
+              : "jump-status"
+          );
+
+          if (statusElement) {
+            statusElement.className = `input-indicator ${
+              active ? "input-active" : "input-inactive"
+            }`;
+            statusElement.textContent = `${
+              action === "moveLeft"
+                ? "Left"
+                : action === "moveRight"
+                ? "Right"
+                : "Jump"
+            }: ${active ? "ON" : "OFF"}`;
+          }
+        }
+      }
+
+      // Update system status
+      function updateSystemStatus(type, message) {
+        const statusElement = document.getElementById("system-status");
+        const statusClass =
+          type === "success"
+            ? "status-success"
+            : type === "warning"
+            ? "status-warning"
+            : "status-error";
+
+        statusElement.innerHTML = `<p><span class="status-indicator ${statusClass}"></span>${message}</p>`;
+      }
+
+      // Test functions
+      function runAlternativeInputTest() {
+        log("=== Running Alternative Input Test ===");
+
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        const results = fallbackInputSystem.testAlternativeInputs();
+        log("📊 Test Results:");
+        log(JSON.stringify(results, null, 2));
+      }
+
+      function testUpArrowJump() {
+        log("=== Testing Up Arrow Jump ===");
+
+        // Simulate up arrow key press
+        const keyDownEvent = new KeyboardEvent("keydown", {
+          code: "ArrowUp",
+          key: "ArrowUp",
+          bubbles: true,
+        });
+
+        const keyUpEvent = new KeyboardEvent("keyup", {
+          code: "ArrowUp",
+          key: "ArrowUp",
+          bubbles: true,
+        });
+
+        document.dispatchEvent(keyDownEvent);
+        log("⬆️ Up arrow keydown dispatched");
+
+        setTimeout(() => {
+          document.dispatchEvent(keyUpEvent);
+          log("⬆️ Up arrow keyup dispatched");
+        }, 100);
+      }
+
+      function testTouchControls() {
+        log("=== Testing Touch Controls ===");
+
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        if (!fallbackInputSystem.touchSupported) {
+          log("⚠️ Touch not supported on this device");
+          return;
+        }
+
+        // Test jump button
+        log("🔘 Testing jump button...");
+        fallbackInputSystem.handleFallbackJump(true);
+        setTimeout(() => {
+          fallbackInputSystem.handleFallbackJump(false);
+          log("✅ Jump button test completed");
+        }, 200);
+
+        // Test movement buttons
+        setTimeout(() => {
+          log("🔘 Testing left movement...");
+          fallbackInputSystem.handleFallbackMove("left", true);
+          setTimeout(() => {
+            fallbackInputSystem.handleFallbackMove("left", false);
+            log("✅ Left movement test completed");
+          }, 200);
+        }, 500);
+
+        setTimeout(() => {
+          log("🔘 Testing right movement...");
+          fallbackInputSystem.handleFallbackMove("right", true);
+          setTimeout(() => {
+            fallbackInputSystem.handleFallbackMove("right", false);
+            log("✅ Right movement test completed");
+          }, 200);
+        }, 1000);
+      }
+
+      function toggleOnScreenControls() {
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        const visible = fallbackInputSystem.toggleOnScreenControls();
+        log(`🎮 On-screen controls ${visible ? "shown" : "hidden"}`);
+      }
+
+      function simulateDoubleTouch() {
+        log("=== Simulating Double Touch ===");
+
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        // Simulate double touch on canvas
+        const touch1 = new TouchEvent("touchstart", {
+          touches: [{ clientX: 400, clientY: 200 }],
+          bubbles: true,
+        });
+
+        const touch2 = new TouchEvent("touchstart", {
+          touches: [{ clientX: 400, clientY: 200 }],
+          bubbles: true,
+        });
+
+        testCanvas.dispatchEvent(touch1);
+        log("👆 First touch dispatched");
+
+        setTimeout(() => {
+          testCanvas.dispatchEvent(touch2);
+          log("👆 Second touch dispatched (double-tap)");
+        }, 150);
+      }
+
+      // Utility functions
+      function log(message) {
+        const logElement = document.getElementById("test-log");
+        const timestamp = new Date().toLocaleTimeString();
+        logElement.textContent += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      function clearLog() {
+        document.getElementById("test-log").textContent = "";
+        log("Log cleared");
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        setTimeout(initTest, 100); // Small delay to ensure all scripts are loaded
+      });
+
+      // Handle page unload
+      window.addEventListener("beforeunload", () => {
+        if (fallbackInputSystem) {
+          fallbackInputSystem.destroy();
+        }
+      });
+    </script>
+  </body>
+</html>

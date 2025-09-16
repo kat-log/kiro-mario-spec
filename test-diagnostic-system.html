@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Diagnostic System Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f0f0f0;
+      }
+      .test-panel {
+        background: white;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 5px 0;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status.warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+      .log {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Enhanced Diagnostic System Test</h1>
+
+    <div class="test-panel">
+      <h3>System Status</h3>
+      <div id="system-status">Initializing...</div>
+    </div>
+
+    <div class="test-panel">
+      <h3>Controls</h3>
+      <button onclick="initializeDiagnostics()">Initialize Diagnostics</button>
+      <button onclick="runSelfDiagnostic()" id="self-diag-btn" disabled>
+        Run Self Diagnostic
+      </button>
+      <button onclick="testRealTimeFeatures()" id="realtime-btn" disabled>
+        Test Real-time Features
+      </button>
+      <button onclick="testVisualizationData()" id="viz-btn" disabled>
+        Test Visualization
+      </button>
+      <button onclick="testPerformanceAnalysis()" id="perf-btn" disabled>
+        Test Performance Analysis
+      </button>
+      <button onclick="exportReport()" id="export-btn" disabled>
+        Export Report
+      </button>
+    </div>
+
+    <div class="test-panel">
+      <h3>Real-time Metrics</h3>
+      <div id="realtime-metrics">
+        <div class="metric">
+          <span>Recording Status:</span>
+          <span id="recording-status">Not Recording</span>
+        </div>
+        <div class="metric">
+          <span>System Health:</span>
+          <span id="system-health">Unknown</span>
+        </div>
+        <div class="metric">
+          <span>Events/Second:</span>
+          <span id="events-per-sec">0</span>
+        </div>
+        <div class="metric">
+          <span>Input Responsiveness:</span>
+          <span id="input-responsiveness">N/A</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="test-panel">
+      <h3>Test Results</h3>
+      <div id="test-results" class="log">Ready to run tests...</div>
+    </div>
+
+    <div class="test-panel">
+      <h3>Alerts</h3>
+      <div id="alerts-container">No alerts</div>
+    </div>
+
+    <script src="js/input-manager.js"></script>
+    <script src="js/input-diagnostic-system.js"></script>
+
+    <script>
+      let diagnosticSystem = null;
+      let inputManager = null;
+      let updateInterval = null;
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const resultsDiv = document.getElementById("test-results");
+        resultsDiv.textContent += `[${timestamp}] ${message}\n`;
+        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        console.log(message);
+      }
+
+      function updateStatus(message, type = "info") {
+        const statusDiv = document.getElementById("system-status");
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+
+      async function initializeDiagnostics() {
+        try {
+          log("Initializing diagnostic system...");
+          updateStatus("Initializing...", "warning");
+
+          // Initialize InputManager
+          inputManager = new InputManager();
+          log("✅ InputManager initialized");
+
+          // Initialize DiagnosticSystem
+          diagnosticSystem = new InputDiagnosticSystem(inputManager);
+          log("✅ InputDiagnosticSystem initialized");
+
+          updateStatus("System initialized successfully", "success");
+
+          // Enable buttons
+          document.getElementById("self-diag-btn").disabled = false;
+          document.getElementById("realtime-btn").disabled = false;
+          document.getElementById("viz-btn").disabled = false;
+          document.getElementById("perf-btn").disabled = false;
+          document.getElementById("export-btn").disabled = false;
+
+          // Start real-time updates
+          startRealTimeUpdates();
+
+          log("🎉 Diagnostic system ready for testing");
+        } catch (error) {
+          log("❌ Initialization failed: " + error.message);
+          updateStatus("Initialization failed: " + error.message, "error");
+        }
+      }
+
+      function runSelfDiagnostic() {
+        if (!diagnosticSystem) {
+          log("❌ Diagnostic system not initialized");
+          return;
+        }
+
+        log("Running self-diagnostic...");
+        const diagnostic = diagnosticSystem.runSelfDiagnostic();
+
+        log(
+          `📊 Self-diagnostic completed - Status: ${diagnostic.systemStatus}`
+        );
+        log(
+          `✅ Passed checks: ${
+            diagnostic.checks.filter((c) => c.status === "passed").length
+          }`
+        );
+        log(
+          `⚠️ Warning checks: ${
+            diagnostic.checks.filter((c) => c.status === "warning").length
+          }`
+        );
+        log(
+          `❌ Failed checks: ${
+            diagnostic.checks.filter((c) => c.status === "failed").length
+          }`
+        );
+
+        if (diagnostic.issues.length > 0) {
+          log("Issues detected:");
+          diagnostic.issues.forEach((issue) => log(`  - ${issue}`));
+        }
+
+        if (diagnostic.recommendations.length > 0) {
+          log("Recommendations:");
+          diagnostic.recommendations.forEach((rec) => log(`  - ${rec}`));
+        }
+      }
+
+      function testRealTimeFeatures() {
+        if (!diagnosticSystem) {
+          log("❌ Diagnostic system not initialized");
+          return;
+        }
+
+        log("Testing real-time features...");
+
+        // Start diagnostics
+        diagnosticSystem.startDiagnostics();
+        log("✅ Diagnostics recording started");
+
+        // Simulate some events
+        setTimeout(() => {
+          diagnosticSystem.simulateSpaceKeyPress();
+          log("🎯 Simulated space key press");
+        }, 500);
+
+        setTimeout(() => {
+          const realTimeData = diagnosticSystem.getRealTimeDiagnostics();
+          log("📊 Real-time data retrieved:");
+          log(`  - Recording: ${realTimeData.recording}`);
+          log(`  - Event count: ${realTimeData.eventCount}`);
+          log(
+            `  - System health: ${
+              realTimeData.systemHealth?.overall || "unknown"
+            }`
+          );
+
+          if (realTimeData.liveMetrics) {
+            log(`  - Events/sec: ${realTimeData.liveMetrics.eventsPerSecond}`);
+            log(
+              `  - Recent success rate: ${realTimeData.liveMetrics.recentSuccessRate}`
+            );
+          }
+
+          diagnosticSystem.stopDiagnostics();
+          log("⏹️ Diagnostics recording stopped");
+        }, 2000);
+      }
+
+      function testVisualizationData() {
+        if (!diagnosticSystem) {
+          log("❌ Diagnostic system not initialized");
+          return;
+        }
+
+        log("Testing visualization data generation...");
+
+        // Generate some test data first
+        diagnosticSystem.startDiagnostics();
+
+        // Simulate multiple events
+        for (let i = 0; i < 5; i++) {
+          setTimeout(() => {
+            diagnosticSystem.simulateSpaceKeyPress();
+          }, i * 200);
+        }
+
+        setTimeout(() => {
+          const vizData = diagnosticSystem.generateVisualizationData();
+          log("📈 Visualization data generated:");
+          log(`  - Timeline events: ${vizData.timeline.length}`);
+          log(
+            `  - Performance chart points: ${vizData.performance.latencyOverTime.length}`
+          );
+          log(
+            `  - Event distribution types: ${vizData.performance.eventDistribution.length}`
+          );
+          log(`  - Summary: ${JSON.stringify(vizData.summary, null, 2)}`);
+
+          diagnosticSystem.stopDiagnostics();
+        }, 2000);
+      }
+
+      function testPerformanceAnalysis() {
+        if (!diagnosticSystem) {
+          log("❌ Diagnostic system not initialized");
+          return;
+        }
+
+        log("Testing performance analysis...");
+
+        const analysis = diagnosticSystem.analyzePerformanceBottlenecks();
+        log("⚡ Performance analysis completed:");
+        log(`  - Severity: ${analysis.severity}`);
+        log(`  - Bottlenecks found: ${analysis.bottlenecks.length}`);
+        log(`  - Optimizations suggested: ${analysis.optimizations.length}`);
+
+        if (analysis.bottlenecks.length > 0) {
+          log("Bottlenecks:");
+          analysis.bottlenecks.forEach((bottleneck) => {
+            log(
+              `  - ${bottleneck.type}: ${bottleneck.description} (${bottleneck.value})`
+            );
+          });
+        }
+
+        const suggestions = diagnosticSystem.generateOptimizationSuggestions();
+        log(`💡 Optimization suggestions: ${suggestions.length}`);
+        suggestions.forEach((suggestion) => {
+          log(
+            `  - [${suggestion.priority}] ${suggestion.title}: ${suggestion.description}`
+          );
+        });
+      }
+
+      function exportReport() {
+        if (!diagnosticSystem) {
+          log("❌ Diagnostic system not initialized");
+          return;
+        }
+
+        log("Testing report export...");
+
+        try {
+          const jsonReport = diagnosticSystem.exportDiagnosticReport("json");
+          log("✅ JSON export successful");
+          log(`  - Size: ${(jsonReport.length / 1024).toFixed(1)} KB`);
+
+          const csvReport = diagnosticSystem.exportDiagnosticReport("csv");
+          log("✅ CSV export successful");
+          log(`  - Size: ${(csvReport.length / 1024).toFixed(1)} KB`);
+
+          const htmlReport = diagnosticSystem.exportDiagnosticReport("html");
+          log("✅ HTML export successful");
+          log(`  - Size: ${(htmlReport.length / 1024).toFixed(1)} KB`);
+
+          // Create download link for JSON report
+          const blob = new Blob([jsonReport], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "diagnostic-report.json";
+          a.textContent = "Download JSON Report";
+          a.style.display = "block";
+          a.style.margin = "10px 0";
+          document.getElementById("test-results").appendChild(a);
+        } catch (error) {
+          log("❌ Export failed: " + error.message);
+        }
+      }
+
+      function startRealTimeUpdates() {
+        if (updateInterval) {
+          clearInterval(updateInterval);
+        }
+
+        updateInterval = setInterval(() => {
+          if (!diagnosticSystem) return;
+
+          const dashboardData = diagnosticSystem.getDashboardData();
+
+          // Update metrics
+          document.getElementById("recording-status").textContent =
+            dashboardData.status.recording ? "Recording" : "Not Recording";
+          document.getElementById("system-health").textContent =
+            dashboardData.status.systemHealth.overall;
+
+          if (dashboardData.metrics.liveMetrics) {
+            document.getElementById("events-per-sec").textContent =
+              dashboardData.metrics.liveMetrics.eventsPerSecond;
+            document.getElementById("input-responsiveness").textContent =
+              dashboardData.metrics.liveMetrics.inputResponsiveness?.status ||
+              "N/A";
+          }
+
+          // Update alerts
+          const alertsContainer = document.getElementById("alerts-container");
+          if (dashboardData.alerts && dashboardData.alerts.length > 0) {
+            alertsContainer.innerHTML = dashboardData.alerts
+              .map(
+                (alert) =>
+                  `<div class="status ${
+                    alert.severity === "high" ? "error" : "warning"
+                  }">
+                            <strong>${alert.type}:</strong> ${alert.message}
+                            <br><em>Action:</em> ${alert.action}
+                        </div>`
+              )
+              .join("");
+          } else {
+            alertsContainer.textContent = "No alerts";
+          }
+        }, 1000);
+      }
+
+      // Initialize on page load
+      window.addEventListener("load", () => {
+        log("🚀 Enhanced Diagnostic System Test loaded");
+        log('Click "Initialize Diagnostics" to begin testing');
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (updateInterval) {
+          clearInterval(updateInterval);
+        }
+      });
+    </script>
+  </body>
+</html>

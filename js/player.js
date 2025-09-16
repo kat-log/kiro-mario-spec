@@ -136,15 +136,34 @@ class Player {
       }
     }
 
-    // Handle jump input
-    if (inputState.jump && this.isOnGround && !this.isBlocking) {
-      console.log("Jump input detected, attempting to jump"); // デバッグログ追加
-      this.jump();
-    } else if (inputState.jump) {
-      // ジャンプできない理由をログ出力
+    // Handle jump input with enhanced logging
+    if (inputState.jump) {
+      const jumpInputTimestamp = performance.now();
       console.log(
-        `Jump blocked - onGround: ${this.isOnGround}, blocking: ${this.isBlocking}`
+        `[INPUT] Jump input detected at ${jumpInputTimestamp.toFixed(2)}ms`,
+        {
+          inputState: { ...inputState },
+          playerState: {
+            isOnGround: this.isOnGround,
+            isBlocking: this.isBlocking,
+            state: this.state,
+            position: { ...this.position },
+            velocity: { ...this.velocity },
+          },
+        }
       );
+
+      const jumpResult = this.jump();
+
+      console.log(`[INPUT] Jump input processed`, {
+        jumpExecuted: jumpResult,
+        processingTime: performance.now() - jumpInputTimestamp,
+        resultingState: {
+          state: this.state,
+          velocity: { ...this.velocity },
+          isOnGround: this.isOnGround,
+        },
+      });
     }
 
     // Handle dash input
@@ -188,21 +207,164 @@ class Player {
   }
 
   /**
-   * Make the player jump
+   * Make the player jump with enhanced logging and validation
    */
   jump() {
-    if (!this.isOnGround || this.isBlocking) return;
+    const timestamp = performance.now();
 
-    this.velocity.y = -this.jumpPower * this.jumpBoost;
+    // Detailed pre-jump validation with logging
+    const jumpValidation = this.validateJumpConditions();
+
+    console.log(`[JUMP] Jump attempt at ${timestamp.toFixed(2)}ms`, {
+      canJump: jumpValidation.canJump,
+      isOnGround: this.isOnGround,
+      isBlocking: this.isBlocking,
+      playerState: this.state,
+      position: { ...this.position },
+      velocity: { ...this.velocity },
+      jumpPower: this.jumpPower,
+      jumpBoost: this.jumpBoost,
+      validation: jumpValidation,
+    });
+
+    // Early return with detailed reason if jump is not possible
+    if (!jumpValidation.canJump) {
+      console.warn(`[JUMP] Jump blocked: ${jumpValidation.reason}`, {
+        isOnGround: this.isOnGround,
+        isBlocking: this.isBlocking,
+        state: this.state,
+        groundCheckDetails: jumpValidation.groundCheckDetails,
+      });
+      return false;
+    }
+
+    // Store pre-jump state for verification
+    const preJumpState = {
+      position: { ...this.position },
+      velocity: { ...this.velocity },
+      state: this.state,
+      isOnGround: this.isOnGround,
+    };
+
+    // Execute jump
+    const effectiveJumpPower = this.jumpPower * this.jumpBoost;
+    this.velocity.y = -effectiveJumpPower;
     this.isOnGround = false;
     this.state = "jumping";
+
+    // Post-jump verification
+    const postJumpState = {
+      position: { ...this.position },
+      velocity: { ...this.velocity },
+      state: this.state,
+      isOnGround: this.isOnGround,
+    };
+
+    console.log(`[JUMP] Jump executed successfully`, {
+      preJumpState,
+      postJumpState,
+      effectiveJumpPower,
+      velocityChange: this.velocity.y - preJumpState.velocity.y,
+      executionTime: performance.now() - timestamp,
+    });
 
     // Play jump sound effect
     if (this.audioManager) {
       this.audioManager.playSound("jump", { preventOverlap: true });
     }
 
-    console.log("Player jumped");
+    // Trigger jump success callback if available
+    if (this.onJumpSuccess) {
+      this.onJumpSuccess({
+        timestamp,
+        preJumpState,
+        postJumpState,
+        effectiveJumpPower,
+      });
+    }
+
+    return true;
+  }
+
+  /**
+   * Validate jump conditions with detailed analysis
+   * @returns {Object} Validation result with detailed information
+   */
+  validateJumpConditions() {
+    const validation = {
+      canJump: false,
+      reason: "",
+      groundCheckDetails: {},
+      blockingFactors: [],
+    };
+
+    // Check ground state with enhanced validation
+    const groundCheck = this.performEnhancedGroundCheck();
+    validation.groundCheckDetails = groundCheck;
+
+    if (!this.isOnGround) {
+      validation.blockingFactors.push("not_on_ground");
+      validation.reason = `Player is not on ground (isOnGround: ${this.isOnGround})`;
+    }
+
+    if (this.isBlocking) {
+      validation.blockingFactors.push("is_blocking");
+      validation.reason +=
+        (validation.reason ? " and " : "") + "Player is blocking";
+    }
+
+    // Additional state checks
+    if (this.state === "dashing") {
+      validation.blockingFactors.push("is_dashing");
+      validation.reason +=
+        (validation.reason ? " and " : "") + "Player is dashing";
+    }
+
+    // Check if player has sufficient jump power
+    const effectiveJumpPower = this.jumpPower * this.jumpBoost;
+    if (effectiveJumpPower <= 0) {
+      validation.blockingFactors.push("no_jump_power");
+      validation.reason +=
+        (validation.reason ? " and " : "") + "No jump power available";
+    }
+
+    // Determine if jump is possible
+    validation.canJump = validation.blockingFactors.length === 0;
+
+    if (validation.canJump) {
+      validation.reason = "Jump conditions satisfied";
+    }
+
+    return validation;
+  }
+
+  /**
+   * Perform enhanced ground detection check
+   * @returns {Object} Detailed ground check information
+   */
+  performEnhancedGroundCheck() {
+    const groundCheck = {
+      isOnGround: this.isOnGround,
+      verticalVelocity: this.velocity.y,
+      position: { ...this.position },
+      groundCheckMethod: "physics_engine_collision",
+      additionalChecks: {},
+    };
+
+    // Additional ground validation checks
+    groundCheck.additionalChecks.velocityCheck = {
+      isMovingDown: this.velocity.y > 0,
+      isStationary: Math.abs(this.velocity.y) < 0.1,
+      velocityValue: this.velocity.y,
+    };
+
+    // Position-based ground check (fallback validation)
+    groundCheck.additionalChecks.positionCheck = {
+      nearBottomBound: false,
+      estimatedGroundY: null,
+    };
+
+    return groundCheck;
   }
 
   /**

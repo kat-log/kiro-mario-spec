@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Input Manager Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-area {
+        border: 2px solid #333;
+        padding: 20px;
+        margin: 20px 0;
+        background: #f9f9f9;
+        border-radius: 4px;
+        min-height: 100px;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .log {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .debug-info {
+        background: #e9ecef;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Enhanced Input Manager Test</h1>
+      <p>
+        このテストでは、強化されたInputManagerのスペースキー検出機能をテストします。
+      </p>
+
+      <div class="status info">
+        <strong>テスト手順:</strong><br />
+        1. 下のテストエリアをクリックしてフォーカスを設定<br />
+        2. スペースキーを押してジャンプ動作をテスト<br />
+        3. ログでイベント検出状況を確認
+      </div>
+
+      <div class="test-area" id="testArea" tabindex="0">
+        <h3>
+          テストエリア (ここをクリックしてからスペースキーを押してください)
+        </h3>
+        <div id="keyStatus">スペースキー: 未押下</div>
+        <div id="jumpStatus">ジャンプアクション: 非アクティブ</div>
+        <div id="focusStatus">フォーカス状態: 確認中...</div>
+      </div>
+
+      <div>
+        <button onclick="testSpaceKey()">スペースキー検出テスト</button>
+        <button onclick="clearLogs()">ログクリア</button>
+        <button onclick="showDebugInfo()">デバッグ情報表示</button>
+        <button onclick="clearEventHistory()">イベント履歴クリア</button>
+      </div>
+
+      <div class="log" id="eventLog"><strong>イベントログ:</strong><br /></div>
+
+      <div class="debug-info" id="debugInfo">
+        <strong>デバッグ情報:</strong>
+        「デバッグ情報表示」ボタンをクリックしてください
+      </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+
+    <script>
+      let inputManager;
+      let testArea;
+      let keyStatusDiv;
+      let jumpStatusDiv;
+      let focusStatusDiv;
+      let eventLogDiv;
+      let debugInfoDiv;
+
+      // Initialize test
+      function initTest() {
+        testArea = document.getElementById("testArea");
+        keyStatusDiv = document.getElementById("keyStatus");
+        jumpStatusDiv = document.getElementById("jumpStatus");
+        focusStatusDiv = document.getElementById("focusStatus");
+        eventLogDiv = document.getElementById("eventLog");
+        debugInfoDiv = document.getElementById("debugInfo");
+
+        // Create InputManager with test area as canvas
+        inputManager = new InputManager(testArea);
+
+        log("Enhanced InputManager initialized");
+        log("Test area setup complete");
+
+        // Start monitoring loop
+        setInterval(updateStatus, 100);
+
+        // Focus the test area
+        testArea.focus();
+      }
+
+      function updateStatus() {
+        if (!inputManager) return;
+
+        // Update key status
+        const spacePressed = inputManager.isKeyHeld("Space");
+        keyStatusDiv.textContent = `スペースキー: ${
+          spacePressed ? "押下中" : "未押下"
+        }`;
+        keyStatusDiv.style.color = spacePressed ? "green" : "black";
+
+        // Update jump action status
+        const jumpActive = inputManager.isActionHeld("jump");
+        const jumpPressed = inputManager.isActionPressed("jump");
+        jumpStatusDiv.textContent = `ジャンプアクション: ${
+          jumpActive ? "アクティブ" : "非アクティブ"
+        } ${jumpPressed ? "(トリガー!)" : ""}`;
+        jumpStatusDiv.style.color = jumpActive ? "green" : "black";
+
+        // Update focus status
+        const focusState = inputManager.getFocusState();
+        focusStatusDiv.textContent = `フォーカス状態: ${
+          focusState.hasFocus ? "フォーカス中" : "フォーカス外"
+        }`;
+        focusStatusDiv.style.color = focusState.hasFocus ? "green" : "red";
+
+        // Update InputManager
+        inputManager.update();
+      }
+
+      function testSpaceKey() {
+        if (!inputManager) {
+          log("ERROR: InputManager not initialized");
+          return;
+        }
+
+        log("=== スペースキー検出テスト開始 ===");
+        const result = inputManager.testSpaceKeyDetection();
+
+        log(
+          `スペースキー状態: ${result.spaceKeyPressed ? "押下中" : "未押下"}`
+        );
+        log(
+          `ジャンプアクション: ${
+            result.jumpActionActive ? "アクティブ" : "非アクティブ"
+          }`
+        );
+        log(`フォーカス状態: ${JSON.stringify(result.focusState)}`);
+        log(`最近のスペースキーイベント数: ${result.recentSpaceEvents.length}`);
+
+        if (result.recentSpaceEvents.length > 0) {
+          log("最新のスペースキーイベント:");
+          result.recentSpaceEvents.forEach((event) => {
+            log(
+              `  ${event.type} at ${event.timestamp.toFixed(2)}ms (ID: ${
+                event.id
+              })`
+            );
+          });
+        }
+      }
+
+      function clearLogs() {
+        eventLogDiv.innerHTML = "<strong>イベントログ:</strong><br>";
+      }
+
+      function clearEventHistory() {
+        if (inputManager) {
+          inputManager.clearEventHistory();
+          log("イベント履歴をクリアしました");
+        }
+      }
+
+      function showDebugInfo() {
+        if (!inputManager) {
+          debugInfoDiv.textContent = "InputManager not initialized";
+          return;
+        }
+
+        const debugInfo = inputManager.getDebugInfo();
+        debugInfoDiv.innerHTML =
+          "<strong>デバッグ情報:</strong><br>" +
+          "<pre>" +
+          JSON.stringify(debugInfo, null, 2) +
+          "</pre>";
+      }
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        eventLogDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+        eventLogDiv.scrollTop = eventLogDiv.scrollHeight;
+        console.log(`[Enhanced Input Test] ${message}`);
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", initTest);
+
+      // Add some additional event listeners for testing
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space") {
+          log(
+            `Document keydown detected: Space (prevented: ${event.defaultPrevented})`
+          );
+        }
+      });
+
+      document.addEventListener("keyup", (event) => {
+        if (event.code === "Space") {
+          log(
+            `Document keyup detected: Space (prevented: ${event.defaultPrevented})`
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

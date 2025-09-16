@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Jump Reliability Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .test-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .primary {
+        background: #007bff;
+        color: white;
+      }
+      .success {
+        background: #28a745;
+        color: white;
+      }
+      .warning {
+        background: #ffc107;
+        color: black;
+      }
+      .danger {
+        background: #dc3545;
+        color: white;
+      }
+
+      .log-container {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      canvas {
+        border: 2px solid #333;
+        display: block;
+        margin: 20px auto;
+      }
+
+      .test-results {
+        margin-top: 20px;
+      }
+
+      .test-item {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .test-pass {
+        background: #d4edda;
+        color: #155724;
+      }
+      .test-fail {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .test-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Enhanced Jump Reliability Test</h1>
+
+      <div class="test-section">
+        <h2>Game Canvas</h2>
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="controls">
+          <button class="primary" onclick="startGame()">Start Game</button>
+          <button class="success" onclick="testJump()">Test Jump</button>
+          <button class="warning" onclick="testJumpSequence()">
+            Test Jump Sequence
+          </button>
+          <button class="danger" onclick="testEdgeCases()">
+            Test Edge Cases
+          </button>
+          <button onclick="clearLogs()">Clear Logs</button>
+          <button onclick="exportLogs()">Export Logs</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value" id="totalJumps">0</div>
+            <div class="stat-label">Total Jump Attempts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="successfulJumps">0</div>
+            <div class="stat-label">Successful Jumps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="failedJumps">0</div>
+            <div class="stat-label">Failed Jumps</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="successRate">0%</div>
+            <div class="stat-label">Success Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Jump Validation Tests</h2>
+        <div class="test-results" id="testResults">
+          <!-- Test results will be populated here -->
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>Debug Log</h2>
+        <div class="log-container" id="logContainer"></div>
+      </div>
+    </div>
+
+    <!-- Include game files -->
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      // Test framework
+      class JumpReliabilityTester {
+        constructor() {
+          this.game = null;
+          this.testStats = {
+            totalJumps: 0,
+            successfulJumps: 0,
+            failedJumps: 0,
+          };
+          this.testResults = [];
+          this.logContainer = document.getElementById("logContainer");
+          this.setupLogging();
+        }
+
+        setupLogging() {
+          // Intercept console.log to display in our log container
+          const originalLog = console.log;
+          const originalWarn = console.warn;
+          const originalError = console.error;
+
+          console.log = (...args) => {
+            originalLog.apply(console, args);
+            this.addToLog("LOG", args);
+          };
+
+          console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            this.addToLog("WARN", args);
+          };
+
+          console.error = (...args) => {
+            originalError.apply(console, args);
+            this.addToLog("ERROR", args);
+          };
+        }
+
+        addToLog(level, args) {
+          const timestamp = new Date().toLocaleTimeString();
+          const message = args
+            .map((arg) =>
+              typeof arg === "object"
+                ? JSON.stringify(arg, null, 2)
+                : String(arg)
+            )
+            .join(" ");
+
+          const logEntry = `[${timestamp}] ${level}: ${message}\n`;
+          this.logContainer.textContent += logEntry;
+          this.logContainer.scrollTop = this.logContainer.scrollHeight;
+        }
+
+        initializeGame() {
+          const canvas = document.getElementById("gameCanvas");
+          this.game = new Game(canvas);
+
+          // Setup jump success callback
+          if (this.game.player) {
+            this.game.player.onJumpSuccess = (data) => {
+              this.testStats.successfulJumps++;
+              this.updateStats();
+              console.log("[TEST] Jump success callback triggered", data);
+            };
+          }
+
+          return this.game;
+        }
+
+        async testSingleJump() {
+          if (!this.game || !this.game.player) {
+            console.error("Game not initialized");
+            return false;
+          }
+
+          this.testStats.totalJumps++;
+
+          // Ensure player is on ground
+          this.game.player.isOnGround = true;
+          this.game.player.position.y = 300; // Safe ground position
+          this.game.player.velocity.y = 0;
+
+          console.log("[TEST] Starting single jump test");
+
+          const jumpResult = this.game.player.jump();
+
+          // Wait a frame to see the result
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+
+          if (!jumpResult) {
+            this.testStats.failedJumps++;
+          }
+
+          this.updateStats();
+          return jumpResult;
+        }
+
+        async testJumpSequence(count = 5) {
+          console.log(`[TEST] Starting jump sequence test (${count} jumps)`);
+
+          const results = [];
+
+          for (let i = 0; i < count; i++) {
+            // Wait for player to land
+            await this.waitForLanding();
+
+            // Small delay between jumps
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            const result = await this.testSingleJump();
+            results.push(result);
+
+            console.log(
+              `[TEST] Jump ${i + 1}/${count}: ${result ? "SUCCESS" : "FAILED"}`
+            );
+          }
+
+          const successCount = results.filter((r) => r).length;
+          console.log(
+            `[TEST] Jump sequence completed: ${successCount}/${count} successful`
+          );
+
+          return results;
+        }
+
+        async waitForLanding() {
+          if (!this.game || !this.game.player) return;
+
+          return new Promise((resolve) => {
+            const checkLanding = () => {
+              if (
+                this.game.player.isOnGround &&
+                Math.abs(this.game.player.velocity.y) < 1
+              ) {
+                resolve();
+              } else {
+                requestAnimationFrame(checkLanding);
+              }
+            };
+            checkLanding();
+          });
+        }
+
+        testEdgeCases() {
+          console.log("[TEST] Starting edge case tests");
+
+          const tests = [
+            {
+              name: "Jump while blocking",
+              setup: () => {
+                this.game.player.isOnGround = true;
+                this.game.player.isBlocking = true;
+              },
+              expectedResult: false,
+            },
+            {
+              name: "Jump while in air",
+              setup: () => {
+                this.game.player.isOnGround = false;
+                this.game.player.isBlocking = false;
+              },
+              expectedResult: false,
+            },
+            {
+              name: "Jump with zero jump power",
+              setup: () => {
+                this.game.player.isOnGround = true;
+                this.game.player.isBlocking = false;
+                this.game.player.jumpPower = 0;
+              },
+              expectedResult: false,
+            },
+            {
+              name: "Normal jump conditions",
+              setup: () => {
+                this.game.player.isOnGround = true;
+                this.game.player.isBlocking = false;
+                this.game.player.jumpPower = 400;
+              },
+              expectedResult: true,
+            },
+          ];
+
+          const testResults = [];
+
+          tests.forEach((test) => {
+            console.log(`[TEST] Running edge case: ${test.name}`);
+
+            // Setup test conditions
+            test.setup();
+
+            // Execute jump
+            const result = this.game.player.jump();
+
+            // Validate result
+            const passed = result === test.expectedResult;
+
+            testResults.push({
+              name: test.name,
+              expected: test.expectedResult,
+              actual: result,
+              passed: passed,
+            });
+
+            console.log(
+              `[TEST] ${test.name}: ${passed ? "PASS" : "FAIL"} (expected: ${
+                test.expectedResult
+              }, got: ${result})`
+            );
+          });
+
+          this.displayTestResults(testResults);
+          return testResults;
+        }
+
+        displayTestResults(results) {
+          const container = document.getElementById("testResults");
+          container.innerHTML = "";
+
+          results.forEach((result) => {
+            const div = document.createElement("div");
+            div.className = `test-item ${
+              result.passed ? "test-pass" : "test-fail"
+            }`;
+            div.innerHTML = `
+                        <span>${result.name}</span>
+                        <span>${
+                          result.passed ? "✓ PASS" : "✗ FAIL"
+                        } (Expected: ${result.expected}, Got: ${
+              result.actual
+            })</span>
+                    `;
+            container.appendChild(div);
+          });
+        }
+
+        updateStats() {
+          document.getElementById("totalJumps").textContent =
+            this.testStats.totalJumps;
+          document.getElementById("successfulJumps").textContent =
+            this.testStats.successfulJumps;
+          document.getElementById("failedJumps").textContent =
+            this.testStats.failedJumps;
+
+          const successRate =
+            this.testStats.totalJumps > 0
+              ? Math.round(
+                  (this.testStats.successfulJumps / this.testStats.totalJumps) *
+                    100
+                )
+              : 0;
+          document.getElementById("successRate").textContent =
+            successRate + "%";
+        }
+
+        clearLogs() {
+          this.logContainer.textContent = "";
+        }
+
+        exportLogs() {
+          const logs = this.logContainer.textContent;
+          const blob = new Blob([logs], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `jump-test-logs-${new Date().toISOString()}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      // Global test instance
+      let tester = new JumpReliabilityTester();
+
+      // Global functions for buttons
+      function startGame() {
+        console.log("[TEST] Initializing game...");
+        tester.initializeGame();
+        console.log("[TEST] Game initialized successfully");
+      }
+
+      function testJump() {
+        tester.testSingleJump();
+      }
+
+      function testJumpSequence() {
+        tester.testJumpSequence(10);
+      }
+
+      function testEdgeCases() {
+        tester.testEdgeCases();
+      }
+
+      function clearLogs() {
+        tester.clearLogs();
+      }
+
+      function exportLogs() {
+        tester.exportLogs();
+      }
+
+      // Auto-initialize when page loads
+      window.addEventListener("load", () => {
+        console.log("[TEST] Page loaded, ready for testing");
+      });
+    </script>
+  </body>
+</html>

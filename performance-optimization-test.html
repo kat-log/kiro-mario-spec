@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Performance Optimization Test - Task 9</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .metrics-display {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .button-group {
+        margin: 10px 0;
+      }
+      .button-group button {
+        margin: 5px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn-warning {
+        background: #ffc107;
+        color: black;
+      }
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+      .btn-info {
+        background: #17a2b8;
+        color: white;
+      }
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+      .status-good {
+        background: #28a745;
+      }
+      .status-warning {
+        background: #ffc107;
+      }
+      .status-critical {
+        background: #dc3545;
+      }
+      .canvas-container {
+        text-align: center;
+        margin: 20px 0;
+      }
+      canvas {
+        border: 2px solid #333;
+        background: #87ceeb;
+      }
+      .log-output {
+        background: #000;
+        color: #0f0;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Performance Optimization Test - Task 9</h1>
+      <p>
+        Testing performance optimization features including input processing
+        measurement, production mode detection, and memory leak prevention.
+      </p>
+
+      <!-- Performance Status -->
+      <div class="test-section">
+        <h3>📊 Performance Status</h3>
+        <div id="performanceStatus">
+          <span class="status-indicator status-good"></span>
+          <span>Initializing...</span>
+        </div>
+        <div class="button-group">
+          <button class="btn-info" onclick="updatePerformanceStatus()">
+            Update Status
+          </button>
+          <button class="btn-primary" onclick="togglePerformanceOverlay()">
+            Toggle Overlay
+          </button>
+        </div>
+      </div>
+
+      <!-- Environment Detection -->
+      <div class="test-section">
+        <h3>🌍 Environment Detection</h3>
+        <div id="environmentInfo">Detecting environment...</div>
+        <div class="button-group">
+          <button class="btn-warning" onclick="simulateProductionMode()">
+            Simulate Production
+          </button>
+          <button class="btn-info" onclick="simulateDevelopmentMode()">
+            Simulate Development
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Processing Metrics -->
+      <div class="test-section">
+        <h3>⌨️ Input Processing Performance</h3>
+        <div class="canvas-container">
+          <canvas
+            id="gameCanvas"
+            width="400"
+            height="200"
+            tabindex="0"
+          ></canvas>
+          <p>
+            Click canvas and press Space key to test input processing
+            performance
+          </p>
+        </div>
+        <div id="inputMetrics" class="metrics-display">
+          No input metrics available yet...
+        </div>
+        <div class="button-group">
+          <button class="btn-primary" onclick="startInputPerformanceTest()">
+            Start Input Test
+          </button>
+          <button class="btn-success" onclick="simulateHighInputLoad()">
+            Simulate High Load
+          </button>
+          <button class="btn-warning" onclick="enableInputThrottling()">
+            Enable Throttling
+          </button>
+        </div>
+      </div>
+
+      <!-- Memory Management -->
+      <div class="test-section">
+        <h3>🧠 Memory Management</h3>
+        <div id="memoryStatus" class="metrics-display">
+          Memory information loading...
+        </div>
+        <div class="button-group">
+          <button class="btn-info" onclick="checkMemoryHealth()">
+            Check Memory
+          </button>
+          <button class="btn-warning" onclick="simulateMemoryPressure()">
+            Simulate Memory Pressure
+          </button>
+          <button class="btn-success" onclick="performMemoryCleanup()">
+            Force Cleanup
+          </button>
+          <button class="btn-danger" onclick="triggerGarbageCollection()">
+            Trigger GC
+          </button>
+        </div>
+      </div>
+
+      <!-- Diagnostic Control -->
+      <div class="test-section">
+        <h3>🔧 Diagnostic Control</h3>
+        <div id="diagnosticStatus">Diagnostic status loading...</div>
+        <div class="button-group">
+          <button class="btn-success" onclick="enableDiagnostics()">
+            Enable Diagnostics
+          </button>
+          <button class="btn-warning" onclick="disableDiagnostics()">
+            Disable Diagnostics
+          </button>
+          <button class="btn-danger" onclick="disableProductionDiagnostics()">
+            Production Mode
+          </button>
+        </div>
+      </div>
+
+      <!-- Resource Tracking -->
+      <div class="test-section">
+        <h3>📦 Resource Tracking</h3>
+        <div id="resourceStatus" class="metrics-display">
+          Resource usage loading...
+        </div>
+        <div class="button-group">
+          <button class="btn-info" onclick="showResourceUsage()">
+            Show Resources
+          </button>
+          <button class="btn-warning" onclick="createTestResources()">
+            Create Test Resources
+          </button>
+          <button class="btn-danger" onclick="cleanupAllResources()">
+            Cleanup All
+          </button>
+        </div>
+      </div>
+
+      <!-- Performance Report -->
+      <div class="test-section">
+        <h3>📋 Performance Report</h3>
+        <div id="performanceReport" class="metrics-display">
+          Click "Generate Report" to see detailed performance analysis...
+        </div>
+        <div class="button-group">
+          <button class="btn-primary" onclick="generatePerformanceReport()">
+            Generate Report
+          </button>
+          <button class="btn-success" onclick="exportPerformanceData()">
+            Export Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Console Log -->
+      <div class="test-section">
+        <h3>📝 Console Log</h3>
+        <div id="consoleLog" class="log-output">
+          Console output will appear here...
+        </div>
+        <div class="button-group">
+          <button class="btn-info" onclick="clearConsoleLog()">
+            Clear Log
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/input-diagnostic-system.js"></script>
+    <script src="js/enhanced-input-manager.js"></script>
+    <script src="js/compatibility-layer.js"></script>
+    <script src="js/focus-manager.js"></script>
+
+    <script>
+      // Global variables
+      let performanceOptimizer;
+      let inputDiagnosticSystem;
+      let enhancedInputManager;
+      let canvas;
+      let ctx;
+      let animationId;
+      let testResources = [];
+
+      // Console logging override
+      const originalConsoleLog = console.log;
+      const originalConsoleWarn = console.warn;
+      const originalConsoleError = console.error;
+
+      function logToDisplay(message, type = "log") {
+        const logElement = document.getElementById("consoleLog");
+        const timestamp = new Date().toLocaleTimeString();
+        const colorClass =
+          type === "warn"
+            ? "color: #ffc107;"
+            : type === "error"
+            ? "color: #dc3545;"
+            : "color: #0f0;";
+        logElement.innerHTML += `<div style="${colorClass}">[${timestamp}] ${message}</div>`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      console.log = function (...args) {
+        originalConsoleLog.apply(console, args);
+        logToDisplay(args.join(" "), "log");
+      };
+
+      console.warn = function (...args) {
+        originalConsoleWarn.apply(console, args);
+        logToDisplay(args.join(" "), "warn");
+      };
+
+      console.error = function (...args) {
+        originalConsoleError.apply(console, args);
+        logToDisplay(args.join(" "), "error");
+      };
+
+      // Initialize test environment
+      function initializeTest() {
+        console.log("🚀 Initializing Performance Optimization Test...");
+
+        // Get canvas and context
+        canvas = document.getElementById("gameCanvas");
+        ctx = canvas.getContext("2d");
+
+        // Create mock game engine
+        const mockGameEngine = {
+          canvas: canvas,
+          ctx: ctx,
+          running: true,
+        };
+
+        // Initialize performance optimizer
+        performanceOptimizer = new PerformanceOptimizer(mockGameEngine);
+        window.gamePerformanceOptimizer = performanceOptimizer; // Global reference
+
+        // Initialize input systems
+        enhancedInputManager = new EnhancedInputManager(canvas);
+        inputDiagnosticSystem = new InputDiagnosticSystem(enhancedInputManager);
+
+        // Start performance monitoring
+        performanceOptimizer.startMonitoring();
+
+        // Start game loop for testing
+        startGameLoop();
+
+        // Update initial status
+        updatePerformanceStatus();
+        updateEnvironmentInfo();
+        updateDiagnosticStatus();
+
+        console.log("✅ Test environment initialized successfully");
+      }
+
+      // Simple game loop for testing
+      function startGameLoop() {
+        let lastTime = 0;
+
+        function gameLoop(currentTime) {
+          const deltaTime = currentTime - lastTime;
+          lastTime = currentTime;
+
+          // Clear canvas
+          ctx.fillStyle = "#87CEEB";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Update performance optimizer
+          performanceOptimizer.update(deltaTime);
+
+          // Render performance overlay if enabled
+          if (performanceOptimizer.showOverlay) {
+            performanceOptimizer.renderOverlay(ctx);
+          }
+
+          // Draw simple test graphics
+          ctx.fillStyle = "#333";
+          ctx.font = "16px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(
+            "Press Space to test input processing",
+            canvas.width / 2,
+            canvas.height / 2
+          );
+          ctx.fillText(
+            "Performance optimization active",
+            canvas.width / 2,
+            canvas.height / 2 + 25
+          );
+
+          animationId = requestAnimationFrame(gameLoop);
+        }
+
+        animationId = requestAnimationFrame(gameLoop);
+      }
+
+      // Performance status functions
+      function updatePerformanceStatus() {
+        const metrics = performanceOptimizer.getMetrics();
+        const statusElement = document.getElementById("performanceStatus");
+
+        const level = metrics.performanceLevel;
+        const statusClass =
+          level === "critical"
+            ? "status-critical"
+            : level === "warning"
+            ? "status-warning"
+            : "status-good";
+
+        statusElement.innerHTML = `
+                <span class="status-indicator ${statusClass}"></span>
+                <strong>Performance Level:</strong> ${level.toUpperCase()}<br>
+                <strong>FPS:</strong> ${metrics.fps.toFixed(1)}<br>
+                <strong>Frame Time:</strong> ${metrics.averageFrameTime.toFixed(
+                  2
+                )}ms<br>
+                <strong>Memory:</strong> ${
+                  metrics.memoryHealth.available
+                    ? metrics.memoryHealth.used
+                    : "N/A"
+                }<br>
+                <strong>Input Processing:</strong> ${
+                  metrics.inputProcessing.averageProcessingTime
+                }ms<br>
+                <strong>Production Mode:</strong> ${
+                  performanceOptimizer.settings.isProduction ? "Yes" : "No"
+                }
+            `;
+      }
+
+      function togglePerformanceOverlay() {
+        performanceOptimizer.showOverlay = !performanceOptimizer.showOverlay;
+        console.log(
+          `Performance overlay ${
+            performanceOptimizer.showOverlay ? "enabled" : "disabled"
+          }`
+        );
+      }
+
+      // Environment detection functions
+      function updateEnvironmentInfo() {
+        const isProduction = performanceOptimizer.settings.isProduction;
+        const diagnosticsDisabled =
+          performanceOptimizer.optimizations.diagnosticsDisabled;
+
+        document.getElementById("environmentInfo").innerHTML = `
+                <strong>Environment:</strong> ${
+                  isProduction ? "Production" : "Development"
+                }<br>
+                <strong>Hostname:</strong> ${location.hostname}<br>
+                <strong>Protocol:</strong> ${location.protocol}<br>
+                <strong>Diagnostics Auto-Disabled:</strong> ${
+                  diagnosticsDisabled ? "Yes" : "No"
+                }<br>
+                <strong>Debug Parameters:</strong> ${
+                  location.search.includes("debug") ? "Present" : "None"
+                }
+            `;
+      }
+
+      function simulateProductionMode() {
+        performanceOptimizer.updateSettings({ isProduction: true });
+        performanceOptimizer.disableProductionDiagnostics();
+        updateEnvironmentInfo();
+        updateDiagnosticStatus();
+        console.log("🏭 Simulated production mode activated");
+      }
+
+      function simulateDevelopmentMode() {
+        performanceOptimizer.updateSettings({ isProduction: false });
+        performanceOptimizer.optimizations.diagnosticsDisabled = false;
+        updateEnvironmentInfo();
+        updateDiagnosticStatus();
+        console.log("🔧 Simulated development mode activated");
+      }
+
+      // Input processing test functions
+      function startInputPerformanceTest() {
+        console.log("⌨️ Starting input performance test...");
+        inputDiagnosticSystem.startDiagnostics();
+
+        // Simulate rapid input events
+        let eventCount = 0;
+        const testInterval = setInterval(() => {
+          if (eventCount >= 50) {
+            clearInterval(testInterval);
+            inputDiagnosticSystem.stopDiagnostics();
+            updateInputMetrics();
+            console.log("✅ Input performance test completed");
+            return;
+          }
+
+          // Simulate space key press
+          const event = new KeyboardEvent("keydown", {
+            code: "Space",
+            key: " ",
+            bubbles: true,
+            cancelable: true,
+          });
+
+          performanceOptimizer.startInputProcessingMeasurement();
+          document.dispatchEvent(event);
+          performanceOptimizer.endInputProcessingMeasurement();
+
+          eventCount++;
+        }, 50);
+      }
+
+      function simulateHighInputLoad() {
+        console.log("🔥 Simulating high input load...");
+
+        // Create many rapid events to test throttling
+        for (let i = 0; i < 100; i++) {
+          setTimeout(() => {
+            performanceOptimizer.startInputProcessingMeasurement();
+            // Simulate processing time
+            const start = performance.now();
+            while (performance.now() - start < 2) {} // Busy wait
+            performanceOptimizer.endInputProcessingMeasurement();
+
+            if (i === 99) {
+              updateInputMetrics();
+              console.log("✅ High input load simulation completed");
+            }
+          }, i * 10);
+        }
+      }
+
+      function enableInputThrottling() {
+        performanceOptimizer.optimizations.inputThrottling = true;
+        console.log("🚦 Input throttling enabled manually");
+        updateInputMetrics();
+      }
+
+      function updateInputMetrics() {
+        const metrics = performanceOptimizer.getMetrics();
+        const inputStats = metrics.inputProcessing;
+
+        document.getElementById("inputMetrics").textContent = `
+Input Processing Metrics:
+- Average Processing Time: ${inputStats.averageProcessingTime}ms
+- Max Processing Time: ${inputStats.maxProcessingTime}ms
+- Average Latency: ${inputStats.averageLatency}ms
+- Max Latency: ${inputStats.maxLatency}ms
+- Queued Events: ${inputStats.queuedEvents}
+- Throttling Active: ${inputStats.throttlingActive ? "Yes" : "No"}
+- Diagnostics Disabled: ${inputStats.diagnosticsDisabled ? "Yes" : "No"}
+            `;
+      }
+
+      // Memory management functions
+      function checkMemoryHealth() {
+        const memoryHealth = performanceOptimizer.getMemoryHealth();
+
+        document.getElementById("memoryStatus").textContent = `
+Memory Health Status:
+- Available: ${memoryHealth.available ? "Yes" : "No"}
+${
+  memoryHealth.available
+    ? `
+- Used: ${memoryHealth.used}
+- Total: ${memoryHealth.total}
+- Limit: ${memoryHealth.limit}
+- Usage: ${memoryHealth.usagePercent}
+- Status: ${memoryHealth.status.toUpperCase()}
+`
+    : "- Memory API not available in this browser"
+}
+            `;
+      }
+
+      function simulateMemoryPressure() {
+        console.log("🧠 Simulating memory pressure...");
+
+        // Create large arrays to simulate memory usage
+        const memoryHogs = [];
+        for (let i = 0; i < 100; i++) {
+          memoryHogs.push(new Array(10000).fill(`memory-test-${i}`));
+        }
+
+        // Force memory check
+        performanceOptimizer.checkMemoryLeaks();
+        checkMemoryHealth();
+
+        // Clean up after test
+        setTimeout(() => {
+          memoryHogs.length = 0;
+          console.log("🧹 Memory pressure simulation cleaned up");
+        }, 5000);
+      }
+
+      function performMemoryCleanup() {
+        performanceOptimizer.performMemoryCleanup();
+        checkMemoryHealth();
+        console.log("🧹 Manual memory cleanup performed");
+      }
+
+      function triggerGarbageCollection() {
+        if (window.gc && typeof window.gc === "function") {
+          window.gc();
+          console.log("🗑️ Manual garbage collection triggered");
+        } else {
+          console.warn("⚠️ Manual garbage collection not available");
+        }
+        checkMemoryHealth();
+      }
+
+      // Diagnostic control functions
+      function updateDiagnosticStatus() {
+        const diagnosticsDisabled =
+          performanceOptimizer.optimizations.diagnosticsDisabled;
+        const isProduction = performanceOptimizer.settings.isProduction;
+
+        document.getElementById("diagnosticStatus").innerHTML = `
+                <strong>Diagnostics Status:</strong> ${
+                  diagnosticsDisabled ? "Disabled" : "Enabled"
+                }<br>
+                <strong>Production Mode:</strong> ${
+                  isProduction ? "Active" : "Inactive"
+                }<br>
+                <strong>Auto-Disable:</strong> ${
+                  performanceOptimizer.settings.inputOptimization
+                    .diagnosticAutoDisable
+                    ? "Yes"
+                    : "No"
+                }<br>
+                <strong>Input Diagnostics:</strong> ${
+                  inputDiagnosticSystem.isRecording ? "Recording" : "Stopped"
+                }
+            `;
+      }
+
+      function enableDiagnostics() {
+        performanceOptimizer.optimizations.diagnosticsDisabled = false;
+        enhancedInputManager.enableDiagnostics();
+        inputDiagnosticSystem.startDiagnostics();
+        updateDiagnosticStatus();
+        console.log("🔧 Diagnostics enabled");
+      }
+
+      function disableDiagnostics() {
+        performanceOptimizer.disableRuntimeDiagnostics();
+        enhancedInputManager.disableDiagnostics();
+        inputDiagnosticSystem.stopDiagnostics();
+        updateDiagnosticStatus();
+        console.log("🚫 Diagnostics disabled");
+      }
+
+      function disableProductionDiagnostics() {
+        performanceOptimizer.disableProductionDiagnostics();
+        updateDiagnosticStatus();
+        console.log("🏭 Production diagnostics disabled");
+      }
+
+      // Resource tracking functions
+      function showResourceUsage() {
+        const resourceUsage = performanceOptimizer.getResourceUsage();
+
+        document.getElementById("resourceStatus").textContent = `
+Resource Usage:
+- Event Listeners: ${resourceUsage.eventListeners}
+- Intervals: ${resourceUsage.intervals}
+- Timeouts: ${resourceUsage.timeouts}
+- Object Pools: ${resourceUsage.objectPools}
+- Total Resources: ${resourceUsage.totalResources}
+            `;
+      }
+
+      function createTestResources() {
+        console.log("📦 Creating test resources...");
+
+        // Create test intervals
+        const interval1 = setInterval(() => {}, 1000);
+        const interval2 = setInterval(() => {}, 2000);
+        performanceOptimizer.registerResource("interval", interval1);
+        performanceOptimizer.registerResource("interval", interval2);
+        testResources.push(interval1, interval2);
+
+        // Create test timeouts
+        const timeout1 = setTimeout(() => {}, 5000);
+        const timeout2 = setTimeout(() => {}, 10000);
+        performanceOptimizer.registerResource("timeout", timeout1);
+        performanceOptimizer.registerResource("timeout", timeout2);
+        testResources.push(timeout1, timeout2);
+
+        // Create test event listeners
+        const testHandler = () => {};
+        document.addEventListener("test-event", testHandler);
+        performanceOptimizer.registerResource("eventListener", {
+          element: document,
+          event: "test-event",
+          handler: testHandler,
+        });
+
+        showResourceUsage();
+        console.log("✅ Test resources created");
+      }
+
+      function cleanupAllResources() {
+        performanceOptimizer.cleanupAllResources();
+        testResources.forEach((resource) => {
+          if (typeof resource === "number") {
+            clearInterval(resource);
+            clearTimeout(resource);
+          }
+        });
+        testResources = [];
+        showResourceUsage();
+        console.log("🧹 All resources cleaned up");
+      }
+
+      // Performance report functions
+      function generatePerformanceReport() {
+        const report = performanceOptimizer.generateReport();
+        const enhancedRecommendations =
+          performanceOptimizer.generateEnhancedRecommendations();
+
+        const reportText = `
+Performance Report Generated: ${new Date().toLocaleString()}
+
+=== METRICS ===
+FPS: ${report.metrics.fps.toFixed(1)}
+Average Frame Time: ${report.metrics.averageFrameTime.toFixed(2)}ms
+Worst Frame Time: ${report.metrics.worstFrameTime.toFixed(2)}ms
+Frame Drops: ${report.metrics.frameDrops}
+
+=== INPUT PROCESSING ===
+Average Processing Time: ${
+          report.metrics.inputProcessing.averageProcessingTime
+        }ms
+Average Latency: ${report.metrics.inputProcessing.averageLatency}ms
+Queued Events: ${report.metrics.inputProcessing.queuedEvents}
+Throttling Active: ${report.metrics.inputProcessing.throttlingActive}
+
+=== MEMORY HEALTH ===
+${
+  report.metrics.memoryHealth.available
+    ? `
+Used: ${report.metrics.memoryHealth.used}
+Usage: ${report.metrics.memoryHealth.usagePercent}
+Status: ${report.metrics.memoryHealth.status.toUpperCase()}
+`
+    : "Memory API not available"
+}
+
+=== OPTIMIZATIONS ===
+${Object.entries(report.optimizations)
+  .filter(([key, value]) => value)
+  .map(([key, value]) => `- ${key}: ${value}`)
+  .join("\n")}
+
+=== RECOMMENDATIONS ===
+${enhancedRecommendations.map((rec) => `- ${rec}`).join("\n")}
+
+=== ENVIRONMENT ===
+Production Mode: ${report.settings.isProduction}
+Diagnostics Auto-Disable: ${
+          report.settings.inputOptimization.diagnosticAutoDisable
+        }
+            `;
+
+        document.getElementById("performanceReport").textContent = reportText;
+        console.log("📋 Performance report generated");
+      }
+
+      function exportPerformanceData() {
+        const data = {
+          timestamp: new Date().toISOString(),
+          metrics: performanceOptimizer.getMetrics(),
+          settings: performanceOptimizer.settings,
+          optimizations: performanceOptimizer.optimizations,
+        };
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `performance-data-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        console.log("💾 Performance data exported");
+      }
+
+      // Utility functions
+      function clearConsoleLog() {
+        document.getElementById("consoleLog").innerHTML = "";
+      }
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", initializeTest);
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (performanceOptimizer) {
+          performanceOptimizer.destroy();
+        }
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Input Manager with Compatibility Layer Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .status {
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-weight: bold;
+        display: inline-block;
+        margin: 5px 0;
+      }
+      .status.pass {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .status.fail {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .status.active {
+        background-color: #cce5ff;
+        color: #004085;
+      }
+      .game-canvas {
+        border: 2px solid #5c94fc;
+        background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+        display: block;
+        margin: 10px auto;
+        cursor: crosshair;
+      }
+      .game-canvas:focus {
+        outline: 3px solid #5c94fc;
+        box-shadow: 0 0 10px rgba(92, 148, 252, 0.5);
+      }
+      .controls-info {
+        background-color: #e7f3ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .action-states {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .action-state {
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+        transition: all 0.2s ease;
+      }
+      .action-state.inactive {
+        background-color: #f8f9fa;
+        color: #6c757d;
+      }
+      .action-state.active {
+        background-color: #28a745;
+        color: white;
+        transform: scale(1.05);
+      }
+      .log-output {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 10px 0;
+      }
+      button {
+        background-color: #5c94fc;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #4a7bc8;
+      }
+      button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+      .browser-info {
+        background-color: #e7f3ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .compatibility-report {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .diagnostic-panel {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+      }
+      .stat-card {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #5c94fc;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #5c94fc;
+      }
+      .stat-label {
+        font-size: 14px;
+        color: #6c757d;
+        margin-top: 5px;
+      }
+      .touch-controls-info {
+        background-color: #e8f5e8;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎮 Enhanced Input Manager with Compatibility Layer Test</h1>
+      <p>
+        このテストページは、ブラウザ互換性レイヤーと統合された強化入力マネージャーをテストします。
+      </p>
+
+      <!-- Game Canvas -->
+      <div class="test-section">
+        <h3>🎯 Game Canvas (Click to Focus)</h3>
+        <canvas
+          id="game-canvas"
+          class="game-canvas"
+          width="800"
+          height="400"
+          tabindex="0"
+        >
+          Your browser does not support the HTML5 Canvas element.
+        </canvas>
+        <div class="controls-info">
+          <p><strong>Controls:</strong></p>
+          <ul>
+            <li><strong>SPACE / ↑ / W:</strong> Jump</li>
+            <li><strong>← / A:</strong> Move Left</li>
+            <li><strong>→ / D:</strong> Move Right</li>
+            <li><strong>↓ / S:</strong> Block</li>
+            <li><strong>Shift:</strong> Dash</li>
+            <li><strong>P:</strong> Pause</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Action States Display -->
+      <div class="test-section">
+        <h3>🎮 Action States (Real-time)</h3>
+        <div id="action-states" class="action-states">
+          <!-- Action states will be populated here -->
+        </div>
+      </div>
+
+      <!-- Browser Compatibility Info -->
+      <div class="test-section">
+        <h3>🌐 Browser Compatibility Information</h3>
+        <div id="browser-info" class="browser-info">
+          <p>Loading browser information...</p>
+        </div>
+        <button onclick="runCompatibilityTest()">Run Compatibility Test</button>
+        <div id="compatibility-report" class="compatibility-report">
+          <p>
+            Click "Run Compatibility Test" to see detailed compatibility
+            information.
+          </p>
+        </div>
+      </div>
+
+      <!-- Input Statistics -->
+      <div class="test-section">
+        <h3>📊 Input Statistics</h3>
+        <div id="input-stats" class="stats-grid">
+          <!-- Stats will be populated here -->
+        </div>
+        <button onclick="resetStats()">Reset Statistics</button>
+      </div>
+
+      <!-- Diagnostic Controls -->
+      <div class="test-section">
+        <h3>🔍 Diagnostic Controls</h3>
+        <div class="diagnostic-panel">
+          <button id="diagnostic-toggle" onclick="toggleDiagnostics()">
+            Enable Diagnostics
+          </button>
+          <button onclick="simulateSpaceKey()">Simulate Space Key</button>
+          <button onclick="testAllKeys()">Test All Keys</button>
+          <button onclick="exportDiagnostics()">Export Diagnostics</button>
+        </div>
+        <div id="diagnostic-info">
+          <p>
+            Diagnostic mode is currently disabled. Enable it to see detailed
+            input information.
+          </p>
+        </div>
+      </div>
+
+      <!-- Touch Controls -->
+      <div class="test-section">
+        <h3>📱 Touch Controls</h3>
+        <div id="touch-controls-info" class="touch-controls-info">
+          <p>Loading touch control information...</p>
+        </div>
+        <button onclick="toggleTouchControls()">Toggle Touch Controls</button>
+      </div>
+
+      <!-- Event Log -->
+      <div class="test-section">
+        <h3>📝 Event Log</h3>
+        <div id="event-log" class="log-output">
+          Event log will appear here...
+        </div>
+        <button onclick="clearEventLog()">Clear Log</button>
+        <button onclick="exportEventLog()">Export Log</button>
+      </div>
+
+      <!-- Performance Monitor -->
+      <div class="test-section">
+        <h3>⚡ Performance Monitor</h3>
+        <div id="performance-monitor" class="stats-grid">
+          <!-- Performance stats will be populated here -->
+        </div>
+        <button onclick="runPerformanceTest()">Run Performance Test</button>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/compatibility-layer.js"></script>
+    <script src="js/enhanced-input-manager.js"></script>
+    <script>
+      let enhancedInputManager;
+      let gameCanvas;
+      let diagnosticsEnabled = false;
+      let touchControlsEnabled = false;
+      let inputStats = {
+        totalKeyEvents: 0,
+        spaceKeyPresses: 0,
+        jumpActions: 0,
+        moveActions: 0,
+        duplicateEvents: 0,
+        averageResponseTime: 0,
+        lastEventTime: 0,
+      };
+      let performanceData = [];
+
+      // Initialize the enhanced input manager
+      function initializeEnhancedInputManager() {
+        try {
+          gameCanvas = document.getElementById("game-canvas");
+          enhancedInputManager = new EnhancedInputManager(gameCanvas);
+
+          setupEventListeners();
+          setupActionStateDisplay();
+          displayBrowserInfo();
+          displayTouchControlsInfo();
+          startPerformanceMonitoring();
+
+          logEvent("✅ Enhanced Input Manager initialized successfully");
+        } catch (error) {
+          logEvent(
+            "❌ Failed to initialize Enhanced Input Manager: " + error.message
+          );
+          console.error(error);
+        }
+      }
+
+      // Setup additional event listeners for testing
+      function setupEventListeners() {
+        // Listen for space key jump events
+        document.addEventListener("spaceKeyJump", (event) => {
+          inputStats.jumpActions++;
+          logEvent(
+            `🚀 Space key jump detected! Fixes: [${event.detail.appliedFixes.join(
+              ", "
+            )}]`
+          );
+          updateInputStats();
+        });
+
+        // Listen for compatibility events
+        document.addEventListener("compatibilityJump", (event) => {
+          inputStats.jumpActions++;
+          logEvent(`📱 Touch jump detected from ${event.detail.source}`);
+          updateInputStats();
+        });
+
+        document.addEventListener("compatibilityMove", (event) => {
+          inputStats.moveActions++;
+          logEvent(
+            `📱 Touch move detected: ${event.detail.direction} ${
+              event.detail.pressed ? "pressed" : "released"
+            }`
+          );
+          updateInputStats();
+        });
+
+        // Canvas focus events
+        gameCanvas.addEventListener("focus", () => {
+          logEvent("🎯 Canvas gained focus");
+        });
+
+        gameCanvas.addEventListener("blur", () => {
+          logEvent("🎯 Canvas lost focus");
+        });
+      }
+
+      // Setup action state display
+      function setupActionStateDisplay() {
+        const actionStatesContainer = document.getElementById("action-states");
+        const actions = [
+          "jump",
+          "moveLeft",
+          "moveRight",
+          "dash",
+          "block",
+          "pause",
+        ];
+
+        actions.forEach((action) => {
+          const actionDiv = document.createElement("div");
+          actionDiv.className = "action-state inactive";
+          actionDiv.id = `action-${action}`;
+          actionDiv.textContent = action.toUpperCase();
+          actionStatesContainer.appendChild(actionDiv);
+        });
+
+        // Update action states in real-time
+        setInterval(updateActionStatesDisplay, 50);
+      }
+
+      // Update action states display
+      function updateActionStatesDisplay() {
+        if (!enhancedInputManager) return;
+
+        const actions = [
+          "jump",
+          "moveLeft",
+          "moveRight",
+          "dash",
+          "block",
+          "pause",
+        ];
+
+        actions.forEach((action) => {
+          const actionDiv = document.getElementById(`action-${action}`);
+          const isPressed = enhancedInputManager.isActionPressed(action);
+
+          if (isPressed) {
+            actionDiv.className = "action-state active";
+          } else {
+            actionDiv.className = "action-state inactive";
+          }
+        });
+
+        // Update input manager
+        enhancedInputManager.update();
+      }
+
+      // Display browser information
+      function displayBrowserInfo() {
+        const browserInfo = enhancedInputManager.compatibilityLayer.browserInfo;
+        const quirks = enhancedInputManager.compatibilityLayer.quirks;
+
+        const infoHtml = `
+                <h4>Browser Details:</h4>
+                <p><strong>Browser:</strong> ${browserInfo.name} ${
+          browserInfo.version
+        }</p>
+                <p><strong>Engine:</strong> ${browserInfo.engine}</p>
+                <p><strong>Platform:</strong> ${browserInfo.platform}</p>
+                <p><strong>Mobile:</strong> ${
+                  browserInfo.isMobile ? "Yes" : "No"
+                }</p>
+                <p><strong>Touch:</strong> ${
+                  browserInfo.isTouch ? "Yes" : "No"
+                }</p>
+
+                <h4>Browser Characteristics:</h4>
+                <p><strong>Key Event Timing:</strong> ${
+                  quirks.keyEventTiming
+                }</p>
+                <p><strong>PreventDefault Required:</strong> ${
+                  quirks.preventDefaultRequired ? "Yes" : "No"
+                }</p>
+                <p><strong>Focus Issues:</strong> ${
+                  quirks.focusIssues ? "Yes" : "No"
+                }</p>
+                <p><strong>Touch Support:</strong> ${
+                  quirks.touchSupport ? "Yes" : "No"
+                }</p>
+
+                <h4>Applied Fixes:</h4>
+                <ul>
+                    ${Array.from(
+                      enhancedInputManager.compatibilityLayer.fixes.entries()
+                    )
+                      .map(
+                        ([fix, enabled]) =>
+                          `<li>${fix}: ${enabled ? "Enabled" : "Disabled"}</li>`
+                      )
+                      .join("")}
+                </ul>
+            `;
+
+        document.getElementById("browser-info").innerHTML = infoHtml;
+      }
+
+      // Display touch controls information
+      function displayTouchControlsInfo() {
+        const touchSupport =
+          enhancedInputManager.compatibilityLayer.touchSupport;
+
+        let infoHtml = `
+                <h4>Touch Support:</h4>
+                <p><strong>Has Touch:</strong> ${
+                  touchSupport.hasTouch ? "Yes" : "No"
+                }</p>
+                <p><strong>Max Touch Points:</strong> ${
+                  touchSupport.maxTouchPoints
+                }</p>
+                <p><strong>Touch Events:</strong> ${
+                  touchSupport.touchEvents ? "Supported" : "Not Supported"
+                }</p>
+                <p><strong>Pointer Events:</strong> ${
+                  touchSupport.pointerEvents ? "Supported" : "Not Supported"
+                }</p>
+            `;
+
+        if (enhancedInputManager.touchControls) {
+          infoHtml += `<p class="status pass">Touch controls are available and can be enabled.</p>`;
+        } else if (touchSupport.hasTouch) {
+          infoHtml += `<p class="status fail">Touch detected but controls setup failed.</p>`;
+        } else {
+          infoHtml += `<p class="status">Touch controls not needed on this device.</p>`;
+        }
+
+        document.getElementById("touch-controls-info").innerHTML = infoHtml;
+      }
+
+      // Run compatibility test
+      function runCompatibilityTest() {
+        logEvent("🧪 Running compatibility test...");
+
+        const results = enhancedInputManager.testBrowserCompatibility();
+        displayCompatibilityResults(results);
+
+        logEvent("✅ Compatibility test completed");
+      }
+
+      // Display compatibility test results
+      function displayCompatibilityResults(results) {
+        let resultsHtml = `
+                <h4>Compatibility Test Results:</h4>
+                <p><strong>Overall:</strong> <span class="status ${
+                  results.overall ? "pass" : "fail"
+                }">${results.overall ? "COMPATIBLE" : "INCOMPATIBLE"}</span></p>
+            `;
+
+        Object.entries(results.tests).forEach(([testName, test]) => {
+          resultsHtml += `
+                    <div style="margin: 10px 0; padding: 10px; background-color: ${
+                      test.passed ? "#d4edda" : "#f8d7da"
+                    }; border-radius: 5px;">
+                        <h5>${test.name}: <span class="status ${
+            test.passed ? "pass" : "fail"
+          }">${test.passed ? "PASS" : "FAIL"}</span></h5>
+                        ${
+                          test.issues.length > 0
+                            ? `<p><strong>Issues:</strong> ${test.issues.join(
+                                ", "
+                              )}</p>`
+                            : ""
+                        }
+                    </div>
+                `;
+        });
+
+        if (results.recommendations.length > 0) {
+          resultsHtml += `
+                    <h4>Recommendations:</h4>
+                    <ul>
+                        ${results.recommendations
+                          .map((rec) => `<li>${rec}</li>`)
+                          .join("")}
+                    </ul>
+                `;
+        }
+
+        document.getElementById("compatibility-report").innerHTML = resultsHtml;
+      }
+
+      // Toggle diagnostics
+      function toggleDiagnostics() {
+        diagnosticsEnabled = !diagnosticsEnabled;
+        const button = document.getElementById("diagnostic-toggle");
+
+        if (diagnosticsEnabled) {
+          enhancedInputManager.enableDiagnostics();
+          button.textContent = "Disable Diagnostics";
+          document.getElementById("diagnostic-info").innerHTML =
+            '<p class="status active">Diagnostic mode is enabled. Detailed input information will be logged.</p>';
+          logEvent("🔍 Diagnostics enabled");
+        } else {
+          enhancedInputManager.disableDiagnostics();
+          button.textContent = "Enable Diagnostics";
+          document.getElementById("diagnostic-info").innerHTML =
+            "<p>Diagnostic mode is disabled.</p>";
+          logEvent("🔍 Diagnostics disabled");
+        }
+      }
+
+      // Toggle touch controls
+      function toggleTouchControls() {
+        if (!enhancedInputManager.compatibilityLayer.touchSupport.hasTouch) {
+          alert("Touch controls are not supported on this device.");
+          return;
+        }
+
+        touchControlsEnabled = !touchControlsEnabled;
+
+        if (touchControlsEnabled) {
+          enhancedInputManager.setupTouchControls();
+          logEvent("📱 Touch controls enabled");
+        } else {
+          // Remove touch controls
+          const jumpButton = document.querySelector(
+            'button[style*="position: fixed"][style*="bottom: 20px"][style*="right: 20px"]'
+          );
+          const moveContainer = document.querySelector(
+            'div[style*="position: fixed"][style*="bottom: 20px"][style*="left: 20px"]'
+          );
+
+          if (jumpButton) jumpButton.remove();
+          if (moveContainer) moveContainer.remove();
+
+          logEvent("📱 Touch controls disabled");
+        }
+      }
+
+      // Simulate space key press
+      function simulateSpaceKey() {
+        gameCanvas.focus();
+
+        const spaceEvent = new KeyboardEvent("keydown", {
+          key: " ",
+          code: "Space",
+          keyCode: 32,
+          bubbles: true,
+          cancelable: true,
+        });
+
+        document.dispatchEvent(spaceEvent);
+
+        setTimeout(() => {
+          const spaceUpEvent = new KeyboardEvent("keyup", {
+            key: " ",
+            code: "Space",
+            keyCode: 32,
+            bubbles: true,
+            cancelable: true,
+          });
+          document.dispatchEvent(spaceUpEvent);
+        }, 100);
+
+        logEvent("🎮 Simulated space key press");
+      }
+
+      // Test all keys
+      function testAllKeys() {
+        const testKeys = [
+          { key: " ", code: "Space", keyCode: 32 },
+          { key: "ArrowUp", code: "ArrowUp", keyCode: 38 },
+          { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
+          { key: "ArrowRight", code: "ArrowRight", keyCode: 39 },
+          { key: "a", code: "KeyA", keyCode: 65 },
+          { key: "d", code: "KeyD", keyCode: 68 },
+        ];
+
+        gameCanvas.focus();
+
+        testKeys.forEach((keyData, index) => {
+          setTimeout(() => {
+            const keyEvent = new KeyboardEvent("keydown", {
+              key: keyData.key,
+              code: keyData.code,
+              keyCode: keyData.keyCode,
+              bubbles: true,
+              cancelable: true,
+            });
+
+            document.dispatchEvent(keyEvent);
+
+            setTimeout(() => {
+              const keyUpEvent = new KeyboardEvent("keyup", {
+                key: keyData.key,
+                code: keyData.code,
+                keyCode: keyData.keyCode,
+                bubbles: true,
+                cancelable: true,
+              });
+              document.dispatchEvent(keyUpEvent);
+            }, 50);
+          }, index * 200);
+        });
+
+        logEvent("🧪 Testing all keys...");
+      }
+
+      // Update input statistics
+      function updateInputStats() {
+        const statsContainer = document.getElementById("input-stats");
+
+        const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.totalKeyEvents}</div>
+                    <div class="stat-label">Total Key Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.spaceKeyPresses}</div>
+                    <div class="stat-label">Space Key Presses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.jumpActions}</div>
+                    <div class="stat-label">Jump Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.moveActions}</div>
+                    <div class="stat-label">Move Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.duplicateEvents}</div>
+                    <div class="stat-label">Duplicate Events</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${inputStats.averageResponseTime.toFixed(
+                      2
+                    )}ms</div>
+                    <div class="stat-label">Avg Response Time</div>
+                </div>
+            `;
+
+        statsContainer.innerHTML = statsHtml;
+      }
+
+      // Reset statistics
+      function resetStats() {
+        inputStats = {
+          totalKeyEvents: 0,
+          spaceKeyPresses: 0,
+          jumpActions: 0,
+          moveActions: 0,
+          duplicateEvents: 0,
+          averageResponseTime: 0,
+          lastEventTime: 0,
+        };
+        updateInputStats();
+        logEvent("📊 Statistics reset");
+      }
+
+      // Start performance monitoring
+      function startPerformanceMonitoring() {
+        setInterval(() => {
+          if (enhancedInputManager && diagnosticsEnabled) {
+            const diagnostics = enhancedInputManager.getInputDiagnostics();
+            updatePerformanceMonitor(diagnostics);
+          }
+        }, 1000);
+      }
+
+      // Update performance monitor
+      function updatePerformanceMonitor(diagnostics) {
+        const performanceContainer = document.getElementById(
+          "performance-monitor"
+        );
+
+        const performanceHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${
+                      diagnostics.diagnostics.length
+                    }</div>
+                    <div class="stat-label">Diagnostic Entries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${
+                      diagnostics.eventHistory.length
+                    }</div>
+                    <div class="stat-label">Event History</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${
+                      diagnostics.currentKeyStates.length
+                    }</div>
+                    <div class="stat-label">Active Keys</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${
+                      diagnostics.currentActionStates.filter(
+                        ([action, state]) => state
+                      ).length
+                    }</div>
+                    <div class="stat-label">Active Actions</div>
+                </div>
+            `;
+
+        performanceContainer.innerHTML = performanceHtml;
+      }
+
+      // Run performance test
+      function runPerformanceTest() {
+        logEvent("⚡ Running performance test...");
+
+        const iterations = 1000;
+        const times = [];
+
+        for (let i = 0; i < iterations; i++) {
+          const start = performance.now();
+
+          // Simulate input processing
+          const testEvent = new KeyboardEvent("keydown", {
+            key: " ",
+            code: "Space",
+            keyCode: 32,
+          });
+
+          enhancedInputManager.compatibilityLayer.normalizeKeyEvent(testEvent);
+          enhancedInputManager.compatibilityLayer.applyBrowserFixes(testEvent);
+
+          const end = performance.now();
+          times.push(end - start);
+        }
+
+        const avgTime =
+          times.reduce((sum, time) => sum + time, 0) / times.length;
+        const maxTime = Math.max(...times);
+        const minTime = Math.min(...times);
+
+        logEvent(`⚡ Performance test completed:`);
+        logEvent(`   Average: ${avgTime.toFixed(3)}ms`);
+        logEvent(`   Max: ${maxTime.toFixed(3)}ms`);
+        logEvent(`   Min: ${minTime.toFixed(3)}ms`);
+        logEvent(
+          `   Performance: ${
+            avgTime < 1 ? "Excellent" : avgTime < 5 ? "Good" : "Poor"
+          }`
+        );
+      }
+
+      // Export diagnostics
+      function exportDiagnostics() {
+        if (!enhancedInputManager) return;
+
+        const diagnostics = enhancedInputManager.getInputDiagnostics();
+        const data = JSON.stringify(diagnostics, null, 2);
+
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `input-diagnostics-${new Date().toISOString()}.json`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        logEvent("📁 Diagnostics exported");
+      }
+
+      // Export event log
+      function exportEventLog() {
+        const logContent = document.getElementById("event-log").textContent;
+
+        const blob = new Blob([logContent], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `event-log-${new Date().toISOString()}.txt`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        logEvent("📁 Event log exported");
+      }
+
+      // Clear event log
+      function clearEventLog() {
+        document.getElementById("event-log").innerHTML =
+          "Event log cleared...\n";
+      }
+
+      // Log event to the event log
+      function logEvent(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${message}`;
+
+        const eventLog = document.getElementById("event-log");
+        eventLog.innerHTML += logEntry + "\n";
+        eventLog.scrollTop = eventLog.scrollHeight;
+
+        console.log(logEntry);
+
+        // Update stats
+        inputStats.totalKeyEvents++;
+        if (message.includes("Space key") || message.includes("space key")) {
+          inputStats.spaceKeyPresses++;
+        }
+
+        const currentTime = performance.now();
+        if (inputStats.lastEventTime > 0) {
+          const responseTime = currentTime - inputStats.lastEventTime;
+          inputStats.averageResponseTime =
+            (inputStats.averageResponseTime + responseTime) / 2;
+        }
+        inputStats.lastEventTime = currentTime;
+
+        updateInputStats();
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        initializeEnhancedInputManager();
+        updateInputStats();
+        logEvent("🎮 Enhanced Input Manager Test page loaded");
+      });
+
+      // Handle page visibility changes
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          logEvent("👁️ Page hidden - input may be paused");
+        } else {
+          logEvent("👁️ Page visible - input resumed");
+        }
+      });
+    </script>
+  </body>
+</html>

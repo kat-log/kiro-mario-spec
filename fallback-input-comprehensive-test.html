@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fallback Input System - Comprehensive Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #667eea;
+      }
+
+      .header h1 {
+        color: #667eea;
+        margin: 0;
+        font-size: 2.5em;
+      }
+
+      .header p {
+        color: #666;
+        margin: 10px 0 0 0;
+        font-size: 1.1em;
+      }
+
+      .test-section {
+        background: white;
+        margin: 20px 0;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #667eea;
+      }
+
+      .test-section h2 {
+        color: #667eea;
+        margin-top: 0;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .requirement-badge {
+        background: #667eea;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 15px;
+        font-size: 0.7em;
+        font-weight: bold;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-success {
+        background: #28a745;
+      }
+      .status-warning {
+        background: #ffc107;
+      }
+      .status-error {
+        background: #dc3545;
+      }
+      .status-info {
+        background: #17a2b8;
+      }
+
+      .test-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0;
+      }
+
+      .test-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .test-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+      }
+
+      .test-button:active {
+        transform: translateY(0);
+      }
+
+      .test-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .test-canvas-container {
+        text-align: center;
+        margin: 20px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+      }
+
+      .test-canvas {
+        border: 3px solid #667eea;
+        border-radius: 10px;
+        background: #87ceeb;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .input-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .input-indicator {
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .input-active {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+      }
+
+      .input-inactive {
+        background: #e9ecef;
+        color: #6c757d;
+        border: 2px dashed #ced4da;
+      }
+
+      .key-test-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 10px;
+        margin: 20px 0;
+      }
+
+      .key-test {
+        padding: 10px;
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        font-weight: bold;
+        text-align: center;
+        transition: all 0.2s ease;
+      }
+
+      .key-test.active {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        border-color: #fd7e14;
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+      }
+
+      .log-output {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 20px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      }
+
+      .log-output::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .log-output::-webkit-scrollbar-track {
+        background: #4a5568;
+        border-radius: 4px;
+      }
+
+      .log-output::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 4px;
+      }
+
+      .instructions {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        border: 1px solid #2196f3;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+
+      .instructions h3 {
+        margin-top: 0;
+        color: #1565c0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .instructions ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+
+      .instructions li {
+        margin: 8px 0;
+        color: #1976d2;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        width: 0%;
+        transition: width 0.5s ease;
+      }
+
+      .test-summary {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .summary-stats {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+      }
+
+      .stat-item {
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        color: #667eea;
+      }
+
+      .stat-label {
+        color: #6c757d;
+        font-size: 0.9em;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          margin: 10px;
+          padding: 20px;
+        }
+
+        .test-controls {
+          justify-content: center;
+        }
+
+        .input-status-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .key-test-grid {
+          grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎮 Fallback Input System</h1>
+        <p>Comprehensive Testing Suite - Requirements 6.1, 6.2, 6.3, 6.4</p>
+      </div>
+
+      <div class="test-section">
+        <h2>🔧 System Status</h2>
+        <div id="system-status">
+          <p>
+            <span class="status-indicator status-warning"></span>Initializing
+            test environment...
+          </p>
+        </div>
+        <div class="progress-bar">
+          <div id="init-progress" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🎯 Interactive Testing Canvas</h2>
+        <div class="instructions">
+          <h3>📋 Test Instructions</h3>
+          <ul>
+            <li>
+              <strong>Jump Keys:</strong> Try SPACE, ↑ (Up Arrow), W, ENTER
+            </li>
+            <li><strong>Movement:</strong> Use ← → (Arrow keys) or A D keys</li>
+            <li>
+              <strong>Touch:</strong> Use on-screen buttons or double-tap canvas
+            </li>
+            <li><strong>Help:</strong> Press H to toggle help overlay</li>
+            <li>
+              <strong>Visual Feedback:</strong> Player changes color based on
+              input
+            </li>
+          </ul>
+        </div>
+
+        <div class="test-canvas-container">
+          <canvas
+            id="test-canvas"
+            class="test-canvas"
+            width="800"
+            height="400"
+          ></canvas>
+        </div>
+
+        <div class="input-status-grid">
+          <div id="jump-status" class="input-indicator input-inactive">
+            🚀 Jump: OFF
+          </div>
+          <div id="left-status" class="input-indicator input-inactive">
+            ⬅️ Left: OFF
+          </div>
+          <div id="right-status" class="input-indicator input-inactive">
+            ➡️ Right: OFF
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>⌨️ Alternative Key Testing</h2>
+        <p>Press any of these keys to test alternative input methods:</p>
+        <div class="key-test-grid">
+          <div class="key-test" data-key="Space">SPACE</div>
+          <div class="key-test" data-key="ArrowUp">↑ UP</div>
+          <div class="key-test" data-key="KeyW">W</div>
+          <div class="key-test" data-key="Enter">ENTER</div>
+          <div class="key-test" data-key="ArrowLeft">← LEFT</div>
+          <div class="key-test" data-key="ArrowRight">→ RIGHT</div>
+          <div class="key-test" data-key="KeyA">A</div>
+          <div class="key-test" data-key="KeyD">D</div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🧪 Automated Test Controls</h2>
+        <div class="test-controls">
+          <button class="test-button" onclick="runComprehensiveTest()">
+            🚀 Run All Tests
+          </button>
+          <button class="test-button" onclick="testRequirement61()">
+            📋 Test Req 6.1
+          </button>
+          <button class="test-button" onclick="testRequirement62()">
+            📋 Test Req 6.2
+          </button>
+          <button class="test-button" onclick="testRequirement63()">
+            📋 Test Req 6.3
+          </button>
+          <button class="test-button" onclick="testRequirement64()">
+            📋 Test Req 6.4
+          </button>
+          <button class="test-button" onclick="testUpArrowJump()">
+            ⬆️ Test Up Arrow
+          </button>
+          <button class="test-button" onclick="testTouchControls()">
+            👆 Test Touch
+          </button>
+          <button class="test-button" onclick="toggleOnScreenControls()">
+            🎮 Toggle Controls
+          </button>
+          <button class="test-button" onclick="clearLog()">🧹 Clear Log</button>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>📊 Test Results Summary</h2>
+        <div id="test-summary" class="test-summary" style="display: none">
+          <h3>Test Execution Complete</h3>
+          <div class="summary-stats">
+            <div class="stat-item">
+              <div id="passed-count" class="stat-number">0</div>
+              <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-item">
+              <div id="total-count" class="stat-number">4</div>
+              <div class="stat-label">Total</div>
+            </div>
+            <div class="stat-item">
+              <div id="success-rate" class="stat-number">0%</div>
+              <div class="stat-label">Success Rate</div>
+            </div>
+          </div>
+          <div id="overall-status"></div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>📝 Test Log</h2>
+        <div id="test-log" class="log-output">
+          Initializing comprehensive test environment...\n
+        </div>
+      </div>
+    </div>
+
+    <!-- Load all required scripts -->
+    <script src="js/input-manager.js"></script>
+    <script src="js/focus-manager.js"></script>
+    <script src="js/compatibility-layer.js"></script>
+    <script src="js/enhanced-input-manager.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="test-fallback-input-system.js"></script>
+
+    <script>
+      // Global test environment
+      let fallbackInputSystem, testCanvas, testCtx, testSuite;
+      let inputStates = { jump: false, moveLeft: false, moveRight: false };
+      let gameEngine;
+
+      // Initialize comprehensive test environment
+      async function initTestEnvironment() {
+        log("🚀 Initializing comprehensive test environment...");
+        updateProgress(20);
+
+        try {
+          // Get canvas and context
+          testCanvas = document.getElementById("test-canvas");
+          testCtx = testCanvas.getContext("2d");
+          updateProgress(40);
+
+          // Create game engine mock
+          gameEngine = {
+            canvas: testCanvas,
+            inputManager: new InputManager(testCanvas),
+          };
+          updateProgress(60);
+
+          // Initialize fallback input system
+          fallbackInputSystem = new FallbackInputSystem(gameEngine);
+          updateProgress(80);
+
+          // Initialize test suite
+          testSuite = new FallbackInputSystemTest();
+          updateProgress(100);
+
+          log("✅ Test environment initialized successfully");
+          updateSystemStatus(
+            "success",
+            "All Systems Ready - Testing Environment Active"
+          );
+
+          // Setup monitoring and rendering
+          setupInputMonitoring();
+          setupCanvasRendering();
+          setupKeyIndicators();
+
+          log("🎮 Interactive testing ready!");
+          log(
+            `Touch Support: ${
+              fallbackInputSystem.touchSupported ? "✅ YES" : "❌ NO"
+            }`
+          );
+          log(
+            `On-Screen Controls: ${
+              fallbackInputSystem.settings.showOnScreenControls
+                ? "✅ ENABLED"
+                : "❌ DISABLED"
+            }`
+          );
+
+          return true;
+        } catch (error) {
+          log(`❌ Initialization failed: ${error.message}`);
+          updateSystemStatus(
+            "error",
+            "Initialization Failed: " + error.message
+          );
+          return false;
+        }
+      }
+
+      // Setup input monitoring
+      function setupInputMonitoring() {
+        setInterval(() => {
+          if (!gameEngine?.inputManager) return;
+
+          const input = gameEngine.inputManager.getPlayerInput();
+          updateInputState("jump", input.jump);
+          updateInputState("moveLeft", input.moveLeft);
+          updateInputState("moveRight", input.moveRight);
+
+          gameEngine.inputManager.update();
+        }, 16);
+
+        // Listen for fallback events
+        document.addEventListener("fallbackJump", (e) => {
+          log(
+            `🚀 Fallback Jump: ${e.detail.pressed ? "PRESSED" : "RELEASED"} (${
+              e.detail.source
+            })`
+          );
+        });
+
+        document.addEventListener("fallbackMove", (e) => {
+          log(
+            `🏃 Fallback Move: ${e.detail.direction.toUpperCase()} ${
+              e.detail.pressed ? "PRESSED" : "RELEASED"
+            } (${e.detail.source})`
+          );
+        });
+      }
+
+      // Setup canvas rendering
+      function setupCanvasRendering() {
+        function render() {
+          // Clear canvas with gradient background
+          const gradient = testCtx.createLinearGradient(
+            0,
+            0,
+            0,
+            testCanvas.height
+          );
+          gradient.addColorStop(0, "#87CEEB");
+          gradient.addColorStop(1, "#4682B4");
+          testCtx.fillStyle = gradient;
+          testCtx.fillRect(0, 0, testCanvas.width, testCanvas.height);
+
+          // Draw ground
+          testCtx.fillStyle = "#8B4513";
+          testCtx.fillRect(0, testCanvas.height - 50, testCanvas.width, 50);
+
+          // Draw grass on ground
+          testCtx.fillStyle = "#228B22";
+          testCtx.fillRect(0, testCanvas.height - 55, testCanvas.width, 5);
+
+          // Draw player (enhanced visual feedback)
+          const playerX = testCanvas.width / 2 - 25;
+          const playerY = testCanvas.height - 100;
+
+          // Player color and effects based on input
+          if (inputStates.jump) {
+            // Jumping - gold with glow effect
+            testCtx.shadowColor = "#FFD700";
+            testCtx.shadowBlur = 20;
+            testCtx.fillStyle = "#FFD700";
+          } else if (inputStates.moveLeft || inputStates.moveRight) {
+            // Moving - green with slight glow
+            testCtx.shadowColor = "#00FF00";
+            testCtx.shadowBlur = 10;
+            testCtx.fillStyle = "#00FF00";
+          } else {
+            // Idle - red, no glow
+            testCtx.shadowBlur = 0;
+            testCtx.fillStyle = "#FF0000";
+          }
+
+          testCtx.fillRect(playerX, playerY, 50, 50);
+          testCtx.shadowBlur = 0; // Reset shadow
+
+          // Draw eyes
+          testCtx.fillStyle = "#000";
+          testCtx.fillRect(playerX + 10, playerY + 10, 8, 8);
+          testCtx.fillRect(playerX + 32, playerY + 10, 8, 8);
+
+          // Draw input status on canvas
+          testCtx.fillStyle = "rgba(0, 0, 0, 0.8)";
+          testCtx.fillRect(10, 10, 200, 100);
+
+          testCtx.fillStyle = "#FFF";
+          testCtx.font = "bold 16px Arial";
+          testCtx.textAlign = "left";
+
+          let y = 35;
+          testCtx.fillText(
+            `Jump: ${inputStates.jump ? "🚀 ACTIVE" : "💤 inactive"}`,
+            20,
+            y
+          );
+          y += 25;
+          testCtx.fillText(
+            `Left: ${inputStates.moveLeft ? "⬅️ ACTIVE" : "💤 inactive"}`,
+            20,
+            y
+          );
+          y += 25;
+          testCtx.fillText(
+            `Right: ${inputStates.moveRight ? "➡️ ACTIVE" : "💤 inactive"}`,
+            20,
+            y
+          );
+
+          requestAnimationFrame(render);
+        }
+
+        render();
+      }
+
+      // Setup key indicators
+      function setupKeyIndicators() {
+        document.addEventListener("keydown", (e) => {
+          const indicator = document.querySelector(`[data-key="${e.code}"]`);
+          if (indicator) {
+            indicator.classList.add("active");
+            log(`🔑 Key Pressed: ${e.code} (${e.key})`);
+          }
+        });
+
+        document.addEventListener("keyup", (e) => {
+          const indicator = document.querySelector(`[data-key="${e.code}"]`);
+          if (indicator) {
+            indicator.classList.remove("active");
+            log(`🔑 Key Released: ${e.code} (${e.key})`);
+          }
+        });
+      }
+
+      // Update input state and UI
+      function updateInputState(action, active) {
+        if (inputStates[action] !== active) {
+          inputStates[action] = active;
+
+          const statusElement = document.getElementById(
+            action === "moveLeft"
+              ? "left-status"
+              : action === "moveRight"
+              ? "right-status"
+              : "jump-status"
+          );
+
+          if (statusElement) {
+            statusElement.className = `input-indicator ${
+              active ? "input-active" : "input-inactive"
+            }`;
+            const emoji =
+              action === "moveLeft"
+                ? "⬅️"
+                : action === "moveRight"
+                ? "➡️"
+                : "🚀";
+            const label =
+              action === "moveLeft"
+                ? "Left"
+                : action === "moveRight"
+                ? "Right"
+                : "Jump";
+            statusElement.textContent = `${emoji} ${label}: ${
+              active ? "ON" : "OFF"
+            }`;
+          }
+        }
+      }
+
+      // Update system status
+      function updateSystemStatus(type, message) {
+        const statusElement = document.getElementById("system-status");
+        const statusClass =
+          type === "success"
+            ? "status-success"
+            : type === "warning"
+            ? "status-warning"
+            : type === "info"
+            ? "status-info"
+            : "status-error";
+
+        statusElement.innerHTML = `<p><span class="status-indicator ${statusClass}"></span>${message}</p>`;
+      }
+
+      // Update progress bar
+      function updateProgress(percent) {
+        const progressBar = document.getElementById("init-progress");
+        if (progressBar) {
+          progressBar.style.width = `${percent}%`;
+        }
+      }
+
+      // Test functions
+      async function runComprehensiveTest() {
+        log("🧪 Starting comprehensive test suite...");
+
+        if (!testSuite) {
+          log("❌ Test suite not initialized");
+          return;
+        }
+
+        try {
+          const results = await testSuite.runAllTests();
+          displayTestResults(results);
+        } catch (error) {
+          log(`❌ Test execution failed: ${error.message}`);
+        }
+      }
+
+      async function testRequirement61() {
+        log("📋 Testing Requirement 6.1: Up Arrow Key Jump...");
+        if (testSuite) {
+          await testSuite.testRequirement6_1();
+          log("✅ Requirement 6.1 test completed");
+        }
+      }
+
+      async function testRequirement62() {
+        log("📋 Testing Requirement 6.2: On-Screen Controls...");
+        if (testSuite) {
+          await testSuite.testRequirement6_2();
+          log("✅ Requirement 6.2 test completed");
+        }
+      }
+
+      async function testRequirement63() {
+        log("📋 Testing Requirement 6.3: Touch Controls...");
+        if (testSuite) {
+          await testSuite.testRequirement6_3();
+          log("✅ Requirement 6.3 test completed");
+        }
+      }
+
+      async function testRequirement64() {
+        log("📋 Testing Requirement 6.4: Accessibility Settings...");
+        if (testSuite) {
+          await testSuite.testRequirement6_4();
+          log("✅ Requirement 6.4 test completed");
+        }
+      }
+
+      function testUpArrowJump() {
+        log("⬆️ Testing up arrow key jump...");
+        const keyDownEvent = new KeyboardEvent("keydown", {
+          code: "ArrowUp",
+          key: "ArrowUp",
+          bubbles: true,
+        });
+
+        document.dispatchEvent(keyDownEvent);
+        log("⬆️ Up arrow keydown dispatched");
+
+        setTimeout(() => {
+          const keyUpEvent = new KeyboardEvent("keyup", {
+            code: "ArrowUp",
+            key: "ArrowUp",
+            bubbles: true,
+          });
+          document.dispatchEvent(keyUpEvent);
+          log("⬆️ Up arrow keyup dispatched");
+        }, 100);
+      }
+
+      function testTouchControls() {
+        log("👆 Testing touch controls...");
+
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        // Test jump
+        fallbackInputSystem.handleFallbackJump(true);
+        setTimeout(() => fallbackInputSystem.handleFallbackJump(false), 200);
+
+        // Test movement
+        setTimeout(() => {
+          fallbackInputSystem.handleFallbackMove("left", true);
+          setTimeout(
+            () => fallbackInputSystem.handleFallbackMove("left", false),
+            200
+          );
+        }, 500);
+
+        setTimeout(() => {
+          fallbackInputSystem.handleFallbackMove("right", true);
+          setTimeout(
+            () => fallbackInputSystem.handleFallbackMove("right", false),
+            200
+          );
+        }, 1000);
+
+        log("✅ Touch control test sequence initiated");
+      }
+
+      function toggleOnScreenControls() {
+        if (!fallbackInputSystem) {
+          log("❌ FallbackInputSystem not initialized");
+          return;
+        }
+
+        const visible = fallbackInputSystem.toggleOnScreenControls();
+        log(`🎮 On-screen controls ${visible ? "shown" : "hidden"}`);
+      }
+
+      // Display test results
+      function displayTestResults(results) {
+        const summary = testSuite.generateTestReport();
+
+        // Show summary section
+        const summaryElement = document.getElementById("test-summary");
+        summaryElement.style.display = "block";
+
+        // Update stats
+        document.getElementById("passed-count").textContent =
+          summary.passedTests;
+        document.getElementById("total-count").textContent = summary.totalTests;
+        document.getElementById(
+          "success-rate"
+        ).textContent = `${summary.successRate.toFixed(1)}%`;
+
+        // Update overall status
+        const overallStatus = document.getElementById("overall-status");
+        if (summary.allPassed) {
+          overallStatus.innerHTML =
+            '<div style="color: #28a745; font-weight: bold; font-size: 1.2em;">🎉 ALL TESTS PASSED!</div>';
+        } else {
+          overallStatus.innerHTML =
+            '<div style="color: #dc3545; font-weight: bold; font-size: 1.2em;">⚠️ Some tests failed</div>';
+        }
+      }
+
+      // Utility functions
+      function log(message) {
+        const logElement = document.getElementById("test-log");
+        const timestamp = new Date().toLocaleTimeString();
+        logElement.textContent += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      function clearLog() {
+        document.getElementById("test-log").textContent = "";
+        log("🧹 Log cleared - Ready for new tests");
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", async () => {
+        await initTestEnvironment();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (fallbackInputSystem) {
+          fallbackInputSystem.destroy();
+        }
+        if (testSuite) {
+          testSuite.cleanup();
+        }
+      });
+    </script>
+  </body>
+</html>

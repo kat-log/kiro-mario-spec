@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Management System Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+
+      .test-section h3 {
+        margin-top: 0;
+        color: #555;
+      }
+
+      #game-canvas {
+        border: 2px solid #333;
+        display: block;
+        margin: 20px auto;
+        background: #87ceeb;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 10px 0;
+      }
+
+      button {
+        padding: 8px 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .status {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .log {
+        background: #000;
+        color: #00ff00;
+        padding: 10px;
+        border-radius: 4px;
+        height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+        margin: 10px 0;
+      }
+
+      .focus-indicator-demo {
+        width: 200px;
+        height: 100px;
+        border: 2px solid #ccc;
+        margin: 10px;
+        padding: 10px;
+        background: #f9f9f9;
+        text-align: center;
+        line-height: 80px;
+      }
+
+      .focus-indicator-demo:focus {
+        outline: 3px dashed #00ff00;
+        background: #e8f5e8;
+      }
+
+      .success {
+        color: #28a745;
+      }
+      .error {
+        color: #dc3545;
+      }
+      .warning {
+        color: #ffc107;
+      }
+      .info {
+        color: #17a2b8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Focus Management System Test</h1>
+
+      <div class="test-section">
+        <h3>Canvas Focus Test</h3>
+        <canvas id="game-canvas" width="400" height="300" tabindex="0"></canvas>
+
+        <div class="controls">
+          <button onclick="testFocusRecovery()">Test Focus Recovery</button>
+          <button onclick="testFocusIndicator()">Toggle Focus Indicator</button>
+          <button onclick="testAggressiveFocus()">
+            Toggle Aggressive Focus
+          </button>
+          <button onclick="simulateFocusLoss()">Simulate Focus Loss</button>
+          <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="status" id="focus-status">Focus Status: Loading...</div>
+      </div>
+
+      <div class="test-section">
+        <h3>Focus Distraction Elements</h3>
+        <p>Click these elements to test focus recovery:</p>
+        <div class="controls">
+          <input type="text" placeholder="Text input to steal focus" />
+          <button>Regular Button</button>
+          <select>
+            <option>Select Option</option>
+            <option>Another Option</option>
+          </select>
+          <div class="focus-indicator-demo" tabindex="0">Focusable Div</div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>Input Test</h3>
+        <p>Focus the canvas and press keys to test input handling:</p>
+        <div class="status" id="input-status">
+          Press keys when canvas is focused...
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>Focus Manager Configuration</h3>
+        <div class="controls">
+          <label>
+            <input type="checkbox" id="showIndicator" checked /> Show Focus
+            Indicator
+          </label>
+          <label>
+            <input type="checkbox" id="autoRecovery" checked /> Auto Recovery
+          </label>
+          <label>
+            <input type="checkbox" id="aggressiveFocus" checked /> Aggressive
+            Focus
+          </label>
+          <label>
+            <input type="checkbox" id="focusPolling" checked /> Focus Polling
+          </label>
+        </div>
+        <button onclick="updateConfig()">Update Configuration</button>
+      </div>
+
+      <div class="test-section">
+        <h3>System Log</h3>
+        <div class="log" id="system-log"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Diagnostic Information</h3>
+        <button onclick="showDiagnostics()">Show Diagnostics</button>
+        <div class="status" id="diagnostics-info">
+          Click "Show Diagnostics" to view detailed information...
+        </div>
+      </div>
+    </div>
+
+    <!-- Include the focus management system -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+
+    <script>
+      let canvas, inputManager, focusManager;
+      let logElement;
+
+      function log(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `[${timestamp}] ${message}`;
+
+        console.log(logEntry);
+
+        if (logElement) {
+          const div = document.createElement("div");
+          div.className = type;
+          div.textContent = logEntry;
+          logElement.appendChild(div);
+          logElement.scrollTop = logElement.scrollHeight;
+        }
+      }
+
+      function updateFocusStatus() {
+        const statusElement = document.getElementById("focus-status");
+        const inputStatusElement = document.getElementById("input-status");
+
+        if (inputManager && focusManager) {
+          const focusState = focusManager.getFocusState();
+          const inputDebug = inputManager.getDebugInfo();
+
+          statusElement.innerHTML = `
+                    <strong>Focus State:</strong><br>
+                    Has Focus: ${focusState.hasFocus ? "✅" : "❌"}<br>
+                    Active Element: ${
+                      focusState.activeElement
+                        ? "Canvas"
+                        : document.activeElement.tagName
+                    }<br>
+                    Document Hidden: ${
+                      focusState.documentHidden ? "❌" : "✅"
+                    }<br>
+                    Window Has Focus: ${
+                      focusState.windowHasFocus ? "✅" : "❌"
+                    }<br>
+                    Indicator Visible: ${
+                      focusState.indicatorVisible ? "✅" : "❌"
+                    }
+                `;
+
+          if (
+            inputDebug.pressedKeys.length > 0 ||
+            inputDebug.activeActions.length > 0
+          ) {
+            inputStatusElement.innerHTML = `
+                        <strong>Input Active:</strong><br>
+                        Keys: ${inputDebug.pressedKeys.join(", ") || "None"}<br>
+                        Actions: ${
+                          inputDebug.activeActions.join(", ") || "None"
+                        }
+                    `;
+          } else {
+            inputStatusElement.textContent =
+              "Press keys when canvas is focused...";
+          }
+        }
+      }
+
+      function testFocusRecovery() {
+        log("Testing focus recovery...", "info");
+        if (focusManager) {
+          const result = focusManager.forceFocusRecovery();
+          log(
+            `Focus recovery result: ${result ? "Success" : "Failed"}`,
+            result ? "success" : "error"
+          );
+        }
+      }
+
+      function testFocusIndicator() {
+        log("Toggling focus indicator...", "info");
+        if (focusManager) {
+          const config = focusManager.config;
+          focusManager.updateConfig({
+            showFocusIndicator: !config.showFocusIndicator,
+          });
+          log(
+            `Focus indicator: ${
+              config.showFocusIndicator ? "Disabled" : "Enabled"
+            }`,
+            "info"
+          );
+        }
+      }
+
+      function testAggressiveFocus() {
+        log("Toggling aggressive focus...", "info");
+        if (focusManager) {
+          const config = focusManager.config;
+          focusManager.updateConfig({
+            aggressiveFocus: !config.aggressiveFocus,
+          });
+          log(
+            `Aggressive focus: ${
+              config.aggressiveFocus ? "Disabled" : "Enabled"
+            }`,
+            "info"
+          );
+        }
+      }
+
+      function simulateFocusLoss() {
+        log("Simulating focus loss...", "warning");
+        document.body.focus();
+        setTimeout(() => {
+          log("Focus loss simulation complete", "info");
+        }, 100);
+      }
+
+      function updateConfig() {
+        if (!focusManager) return;
+
+        const config = {
+          showFocusIndicator: document.getElementById("showIndicator").checked,
+          autoRecovery: document.getElementById("autoRecovery").checked,
+          aggressiveFocus: document.getElementById("aggressiveFocus").checked,
+          focusPollingEnabled: document.getElementById("focusPolling").checked,
+        };
+
+        focusManager.updateConfig(config);
+        log("Configuration updated: " + JSON.stringify(config), "info");
+      }
+
+      function showDiagnostics() {
+        const diagnosticsElement = document.getElementById("diagnostics-info");
+
+        if (inputManager && focusManager) {
+          const inputDiag = inputManager.getDebugInfo();
+          const focusDiag = focusManager.getDiagnosticInfo();
+
+          diagnosticsElement.innerHTML = `
+                    <strong>Input Manager:</strong><br>
+                    Keys Tracked: ${inputDiag.totalKeysTracked}<br>
+                    Focus Manager: ${inputDiag.focusManager ? "✅" : "❌"}<br>
+                    <br>
+                    <strong>Focus Manager:</strong><br>
+                    Polling Active: ${focusDiag.pollingActive ? "✅" : "❌"}<br>
+                    Indicator Exists: ${
+                      focusDiag.indicatorExists ? "✅" : "❌"
+                    }<br>
+                    Event Listeners: ${focusDiag.eventListenersCount}<br>
+                    <br>
+                    <strong>Focus History (last 5):</strong><br>
+                    ${focusDiag.history
+                      .slice(-5)
+                      .map(
+                        (event) =>
+                          `${new Date(event.timestamp).toLocaleTimeString()}: ${
+                            event.type
+                          } (${event.focusState})`
+                      )
+                      .join("<br>")}
+                `;
+        }
+      }
+
+      function clearLog() {
+        if (logElement) {
+          logElement.innerHTML = "";
+        }
+      }
+
+      // Initialize the test system
+      function init() {
+        canvas = document.getElementById("game-canvas");
+        logElement = document.getElementById("system-log");
+
+        log("Initializing Focus Management Test...", "info");
+
+        try {
+          // Initialize InputManager with canvas
+          inputManager = new InputManager(canvas);
+          focusManager = inputManager.focusManager;
+
+          if (focusManager) {
+            log("✅ Focus Manager initialized successfully", "success");
+          } else {
+            log("❌ Focus Manager not available", "error");
+          }
+
+          // Set up canvas rendering
+          const ctx = canvas.getContext("2d");
+
+          function render() {
+            // Clear canvas
+            ctx.fillStyle = "#87CEEB";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw focus state indicator
+            const focusState = focusManager
+              ? focusManager.getFocusState()
+              : { hasFocus: false };
+
+            ctx.fillStyle = focusState.hasFocus ? "#00FF00" : "#FF0000";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+              focusState.hasFocus ? "FOCUSED" : "NOT FOCUSED",
+              canvas.width / 2,
+              canvas.height / 2
+            );
+
+            ctx.fillStyle = "#000";
+            ctx.font = "14px Arial";
+            ctx.fillText(
+              "Click here and press keys to test",
+              canvas.width / 2,
+              canvas.height / 2 + 30
+            );
+
+            // Show pressed keys
+            if (inputManager) {
+              const debug = inputManager.getDebugInfo();
+              if (debug.pressedKeys.length > 0) {
+                ctx.fillStyle = "#0000FF";
+                ctx.fillText(
+                  "Keys: " + debug.pressedKeys.join(", "),
+                  canvas.width / 2,
+                  canvas.height / 2 + 60
+                );
+              }
+            }
+
+            requestAnimationFrame(render);
+          }
+
+          render();
+
+          // Update status periodically
+          setInterval(updateFocusStatus, 500);
+
+          log("✅ Test system initialized successfully", "success");
+        } catch (error) {
+          log("❌ Initialization failed: " + error.message, "error");
+          console.error(error);
+        }
+      }
+
+      // Start when page loads
+      window.addEventListener("load", init);
+
+      // Handle page visibility changes
+      document.addEventListener("visibilitychange", () => {
+        log(
+          `Page visibility changed: ${document.hidden ? "hidden" : "visible"}`,
+          "info"
+        );
+      });
+
+      // Handle window focus changes
+      window.addEventListener("focus", () => {
+        log("Window gained focus", "info");
+      });
+
+      window.addEventListener("blur", () => {
+        log("Window lost focus", "warning");
+      });
+    </script>
+  </body>
+</html>

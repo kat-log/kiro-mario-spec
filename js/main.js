@@ -45,7 +45,7 @@ class GameEngine {
     this.sceneManager = null;
 
     // Initialize input manager
-    this.inputManager = new InputManager();
+    this.inputManager = new InputManager(canvas);
 
     // Initialize physics engine
     this.physicsEngine = new PhysicsEngine();
@@ -225,6 +225,11 @@ class GameEngine {
       this.bugDetector.stopContinuousMonitoring();
     }
 
+    // Cleanup fallback input system
+    if (this.fallbackInputSystem) {
+      this.fallbackInputSystem.destroy();
+    }
+
     console.log("Game engine stopped");
   }
 
@@ -328,6 +333,11 @@ class GameEngine {
 
     // Update input manager first
     this.inputManager.update();
+
+    // Update fallback input system
+    if (this.fallbackInputSystem) {
+      this.fallbackInputSystem.update(deltaTime);
+    }
 
     // Handle global input actions
     this.handleGlobalInput();
@@ -547,12 +557,97 @@ class GameEngine {
   }
 
   /**
+   * Validate ground collision for reliability
+   * @param {Object} collision - Collision data
+   * @param {Object} player - Player object
+   * @returns {Object} Validation result
+   */
+  validateGroundCollision(collision, player) {
+    const validation = {
+      isValid: true,
+      issues: [],
+    };
+
+    // Check if collision resolution makes sense
+    if (collision.resolution.direction === "bottom") {
+      // Validate that player was moving downward or stationary
+      if (player.velocity.y < -50) {
+        // Significant upward velocity
+        validation.isValid = false;
+        validation.issues.push(
+          "Player has significant upward velocity during ground collision"
+        );
+      }
+
+      // Validate overlap amount is reasonable
+      if (
+        collision.resolution.overlap &&
+        Math.abs(collision.resolution.overlap.y) > player.size.height
+      ) {
+        validation.isValid = false;
+        validation.issues.push(
+          "Ground collision overlap is larger than player height"
+        );
+      }
+    }
+
+    return validation;
+  }
+
+  /**
+   * Validate player ground state for consistency
+   */
+  validatePlayerGroundState() {
+    if (!this.player) return;
+
+    const validation = {
+      timestamp: performance.now(),
+      isOnGround: this.player.isOnGround,
+      velocity: { ...this.player.velocity },
+      position: { ...this.player.position },
+      issues: [],
+    };
+
+    // Check for inconsistent states
+    if (this.player.isOnGround && this.player.velocity.y > 100) {
+      validation.issues.push(
+        "Player marked as on ground but has significant downward velocity"
+      );
+    }
+
+    if (
+      !this.player.isOnGround &&
+      Math.abs(this.player.velocity.y) < 0.1 &&
+      this.player.state !== "jumping"
+    ) {
+      validation.issues.push(
+        "Player not on ground but has minimal velocity and not jumping"
+      );
+    }
+
+    // Log validation issues
+    if (validation.issues.length > 0) {
+      console.warn(`[PHYSICS] Ground state validation issues:`, validation);
+    }
+
+    return validation;
+  }
+
+  /**
    * Update physics for all entities
    */
   updatePhysics(deltaTime) {
-    // Update player physics
+    // Update player physics with enhanced ground detection
     if (this.player && this.currentStage) {
-      // Reset ground state
+      // Store previous ground state for comparison
+      const wasOnGround = this.player.isOnGround;
+      const prePhysicsState = {
+        position: { ...this.player.position },
+        velocity: { ...this.player.velocity },
+        isOnGround: this.player.isOnGround,
+      };
+
+      // Reset ground state for this frame
       this.player.isOnGround = false;
 
       // Apply gravity to the player
@@ -562,47 +657,108 @@ class GameEngine {
       this.physicsEngine.applyFriction(
         this.player,
         deltaTime,
-        this.player.isOnGround
+        wasOnGround // Use previous frame's ground state for friction calculation
       );
 
       // Update position based on velocity
       this.physicsEngine.updatePosition(this.player, deltaTime);
 
-      // Check collisions with stage platforms
+      // Enhanced collision detection with detailed logging
       const collisions = this.currentStage.checkPlatformCollisions(
         this.player,
         this.physicsEngine
       );
 
-      // Process collision results
+      let groundCollisionDetected = false;
+      const collisionDetails = [];
+
+      // Process collision results with enhanced validation
       for (const collision of collisions) {
+        collisionDetails.push({
+          platform: collision.platform
+            ? collision.platform.id || "unknown"
+            : "stage_bound",
+          resolution: collision.resolution,
+          overlap: collision.resolution.overlap,
+        });
+
         if (
           collision.resolution.resolved &&
           collision.resolution.direction === "bottom"
         ) {
           this.player.isOnGround = true;
+          groundCollisionDetected = true;
+
+          // Additional validation for ground collision
+          const groundValidation = this.validateGroundCollision(
+            collision,
+            this.player
+          );
+          if (!groundValidation.isValid) {
+            console.warn(
+              `[PHYSICS] Ground collision validation failed:`,
+              groundValidation
+            );
+          }
         }
       }
 
-      // Keep player within stage bounds
+      // Enhanced stage bounds checking
       const stageBounds = this.currentStage.getBounds();
+      let boundaryCollision = false;
+
+      // Horizontal bounds
       if (this.player.position.x < stageBounds.left) {
         this.player.position.x = stageBounds.left;
         this.player.velocity.x = 0;
+        boundaryCollision = true;
       } else if (
         this.player.position.x + this.player.size.width >
         stageBounds.right
       ) {
         this.player.position.x = stageBounds.right - this.player.size.width;
         this.player.velocity.x = 0;
+        boundaryCollision = true;
       }
 
-      // Prevent player from falling through the bottom
-      if (this.player.position.y > stageBounds.bottom) {
+      // Enhanced bottom boundary check with ground state validation
+      if (
+        this.player.position.y + this.player.size.height >=
+        stageBounds.bottom
+      ) {
         this.player.position.y = stageBounds.bottom - this.player.size.height;
         this.player.velocity.y = 0;
         this.player.isOnGround = true;
+        boundaryCollision = true;
+
+        console.log(`[PHYSICS] Player hit stage bottom boundary`, {
+          playerBottom: this.player.position.y + this.player.size.height,
+          stageBottom: stageBounds.bottom,
+          correctedPosition: this.player.position.y,
+        });
       }
+
+      // Log ground state changes for debugging
+      if (wasOnGround !== this.player.isOnGround) {
+        console.log(
+          `[PHYSICS] Ground state changed: ${wasOnGround} -> ${this.player.isOnGround}`,
+          {
+            prePhysicsState,
+            postPhysicsState: {
+              position: { ...this.player.position },
+              velocity: { ...this.player.velocity },
+              isOnGround: this.player.isOnGround,
+            },
+            collisionDetails,
+            groundCollisionDetected,
+            boundaryCollision,
+            frameTime: deltaTime,
+          }
+        );
+      }
+
+      // Additional ground state validation
+      this.validatePlayerGroundState();
     }
 
     // Update test ball physics (keep for demonstration)
@@ -1230,6 +1386,14 @@ class GameEngine {
 
     // Initialize usability improvements
     this.usabilityImprovements = new UsabilityImprovements(this);
+
+    // Initialize fallback input system
+    if (typeof FallbackInputSystem !== "undefined") {
+      this.fallbackInputSystem = new FallbackInputSystem(this);
+      console.log("代替入力システムが初期化されました");
+    } else {
+      console.warn("FallbackInputSystem not available");
+    }
 
     // Run initial compatibility check
     console.log("ブラウザ互換性チェックを実行中...");

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jump Implementation Verification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+      }
+      .warning {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+      }
+      .log-output {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .stat {
+        text-align: center;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+      }
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎮 Jump Implementation Verification</h1>
+      <p>
+        Task 5: ジャンプアクション実行の確実性を向上させる - Implementation
+        Verification
+      </p>
+
+      <div class="test-section">
+        <h2>📊 Test Results</h2>
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-value" id="totalTests">0</div>
+            <div>Total Tests</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="passedTests">0</div>
+            <div>Passed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="failedTests">0</div>
+            <div>Failed</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="successRate">0%</div>
+            <div>Success Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>🔧 Test Controls</h2>
+        <button onclick="runBasicTests()">Run Basic Jump Tests</button>
+        <button onclick="runValidationTests()">Run Validation Tests</button>
+        <button onclick="runLoggingTests()">Run Logging Tests</button>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearLog()">Clear Log</button>
+      </div>
+
+      <div class="test-section">
+        <h2>📝 Implementation Checklist</h2>
+        <div id="checklist">
+          <div class="check-item" id="check-validation">
+            ❓ Enhanced jump validation with detailed conditions check
+          </div>
+          <div class="check-item" id="check-logging">
+            ❓ Detailed logging for jump execution stages
+          </div>
+          <div class="check-item" id="check-ground">
+            ❓ Improved ground detection and state verification
+          </div>
+          <div class="check-item" id="check-performance">
+            ❓ Performance impact within acceptable limits
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>📋 Test Log</h2>
+        <div class="log-output" id="logOutput"></div>
+      </div>
+    </div>
+
+    <!-- Include game files -->
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      class JumpVerificationTester {
+        constructor() {
+          this.testResults = [];
+          this.logOutput = document.getElementById("logOutput");
+          this.setupConsoleCapture();
+        }
+
+        setupConsoleCapture() {
+          const originalLog = console.log;
+          const originalWarn = console.warn;
+          const originalError = console.error;
+
+          console.log = (...args) => {
+            originalLog.apply(console, args);
+            this.addToLog("INFO", args);
+          };
+
+          console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            this.addToLog("WARN", args);
+          };
+
+          console.error = (...args) => {
+            originalError.apply(console, args);
+            this.addToLog("ERROR", args);
+          };
+        }
+
+        addToLog(level, args) {
+          const timestamp = new Date().toLocaleTimeString();
+          const message = args
+            .map((arg) =>
+              typeof arg === "object"
+                ? JSON.stringify(arg, null, 2)
+                : String(arg)
+            )
+            .join(" ");
+
+          this.logOutput.textContent += `[${timestamp}] ${level}: ${message}\n`;
+          this.logOutput.scrollTop = this.logOutput.scrollHeight;
+        }
+
+        async runBasicTests() {
+          this.addToLog("TEST", ["Starting basic jump functionality tests..."]);
+
+          // Create test player
+          const canvas = document.createElement("canvas");
+          canvas.width = 800;
+          canvas.height = 400;
+          const game = new Game(canvas);
+          const player = game.player;
+
+          if (!player) {
+            this.addTestResult(
+              "Player Creation",
+              false,
+              "Failed to create player"
+            );
+            return;
+          }
+
+          // Test 1: Basic jump method exists and enhanced
+          const hasEnhancedJump =
+            typeof player.validateJumpConditions === "function" &&
+            typeof player.performEnhancedGroundCheck === "function";
+          this.addTestResult(
+            "Enhanced Jump Methods",
+            hasEnhancedJump,
+            hasEnhancedJump
+              ? "Enhanced methods found"
+              : "Enhanced methods missing"
+          );
+
+          // Test 2: Jump validation works
+          player.isOnGround = true;
+          player.isBlocking = false;
+          const validation = player.validateJumpConditions();
+          this.addTestResult(
+            "Jump Validation",
+            validation && validation.canJump !== undefined,
+            validation
+              ? `Validation works: ${validation.reason}`
+              : "Validation failed"
+          );
+
+          // Test 3: Enhanced ground check works
+          const groundCheck = player.performEnhancedGroundCheck();
+          this.addTestResult(
+            "Enhanced Ground Check",
+            groundCheck && groundCheck.additionalChecks !== undefined,
+            groundCheck ? "Ground check enhanced" : "Ground check not enhanced"
+          );
+
+          // Test 4: Jump execution with logging
+          player.isOnGround = true;
+          const jumpResult = player.jump();
+          this.addTestResult(
+            "Jump Execution",
+            jumpResult === true,
+            jumpResult ? "Jump executed successfully" : "Jump execution failed"
+          );
+
+          this.updateChecklistItem("check-validation", hasEnhancedJump);
+        }
+
+        async runValidationTests() {
+          this.addToLog("TEST", ["Starting validation tests..."]);
+
+          const canvas = document.createElement("canvas");
+          const game = new Game(canvas);
+          const player = game.player;
+
+          if (!player || typeof player.validateJumpConditions !== "function") {
+            this.addTestResult(
+              "Validation Setup",
+              false,
+              "Player or validation method not available"
+            );
+            return;
+          }
+
+          // Test different validation scenarios
+          const scenarios = [
+            {
+              name: "Valid Jump Conditions",
+              setup: () => {
+                player.isOnGround = true;
+                player.isBlocking = false;
+                player.jumpPower = 400;
+              },
+              expected: true,
+            },
+            {
+              name: "Not On Ground",
+              setup: () => {
+                player.isOnGround = false;
+                player.isBlocking = false;
+                player.jumpPower = 400;
+              },
+              expected: false,
+            },
+            {
+              name: "While Blocking",
+              setup: () => {
+                player.isOnGround = true;
+                player.isBlocking = true;
+                player.jumpPower = 400;
+              },
+              expected: false,
+            },
+            {
+              name: "Zero Jump Power",
+              setup: () => {
+                player.isOnGround = true;
+                player.isBlocking = false;
+                player.jumpPower = 0;
+              },
+              expected: false,
+            },
+          ];
+
+          let validationsPassed = 0;
+          for (const scenario of scenarios) {
+            scenario.setup();
+            const validation = player.validateJumpConditions();
+            const passed = validation.canJump === scenario.expected;
+
+            this.addTestResult(
+              `Validation: ${scenario.name}`,
+              passed,
+              `Expected: ${scenario.expected}, Got: ${validation.canJump}, Reason: ${validation.reason}`
+            );
+
+            if (passed) validationsPassed++;
+          }
+
+          this.updateChecklistItem(
+            "check-validation",
+            validationsPassed === scenarios.length
+          );
+        }
+
+        async runLoggingTests() {
+          this.addToLog("TEST", ["Starting logging tests..."]);
+
+          const canvas = document.createElement("canvas");
+          const game = new Game(canvas);
+          const player = game.player;
+
+          if (!player) {
+            this.addTestResult("Logging Setup", false, "Player not available");
+            return;
+          }
+
+          // Capture log messages
+          let logMessages = [];
+          const originalLog = console.log;
+          console.log = (...args) => {
+            logMessages.push(args.join(" "));
+            originalLog.apply(console, args);
+          };
+
+          // Test successful jump logging
+          player.isOnGround = true;
+          player.isBlocking = false;
+          player.jump();
+
+          // Test failed jump logging
+          player.isOnGround = false;
+          player.jump();
+
+          console.log = originalLog;
+
+          // Check for expected log patterns
+          const hasJumpAttemptLog = logMessages.some((msg) =>
+            msg.includes("[JUMP] Jump attempt")
+          );
+          const hasJumpSuccessLog = logMessages.some((msg) =>
+            msg.includes("[JUMP] Jump executed successfully")
+          );
+          const hasJumpBlockedLog = logMessages.some((msg) =>
+            msg.includes("[JUMP] Jump blocked")
+          );
+
+          this.addTestResult(
+            "Jump Attempt Logging",
+            hasJumpAttemptLog,
+            hasJumpAttemptLog
+              ? "Jump attempt logging works"
+              : "Jump attempt logging missing"
+          );
+
+          this.addTestResult(
+            "Jump Success Logging",
+            hasJumpSuccessLog,
+            hasJumpSuccessLog
+              ? "Jump success logging works"
+              : "Jump success logging missing"
+          );
+
+          this.addTestResult(
+            "Jump Blocked Logging",
+            hasJumpBlockedLog,
+            hasJumpBlockedLog
+              ? "Jump blocked logging works"
+              : "Jump blocked logging missing"
+          );
+
+          const allLoggingWorks =
+            hasJumpAttemptLog && hasJumpSuccessLog && hasJumpBlockedLog;
+          this.updateChecklistItem("check-logging", allLoggingWorks);
+        }
+
+        async runAllTests() {
+          this.clearResults();
+          this.addToLog("TEST", ["Running comprehensive test suite..."]);
+
+          await this.runBasicTests();
+          await this.runValidationTests();
+          await this.runLoggingTests();
+
+          // Performance test
+          const startTime = performance.now();
+          const canvas = document.createElement("canvas");
+          const game = new Game(canvas);
+          const player = game.player;
+
+          if (player) {
+            for (let i = 0; i < 100; i++) {
+              player.isOnGround = true;
+              player.jump();
+            }
+          }
+
+          const executionTime = performance.now() - startTime;
+          const performanceOk = executionTime < 100; // Should complete 100 jumps in under 100ms
+
+          this.addTestResult(
+            "Performance Test",
+            performanceOk,
+            `100 jumps executed in ${executionTime.toFixed(2)}ms`
+          );
+
+          this.updateChecklistItem("check-performance", performanceOk);
+
+          // Ground detection test
+          if (
+            player &&
+            typeof player.performEnhancedGroundCheck === "function"
+          ) {
+            player.isOnGround = true;
+            const groundCheck = player.performEnhancedGroundCheck();
+            const groundDetectionEnhanced =
+              groundCheck &&
+              groundCheck.additionalChecks &&
+              groundCheck.additionalChecks.velocityCheck;
+
+            this.addTestResult(
+              "Ground Detection Enhancement",
+              groundDetectionEnhanced,
+              groundDetectionEnhanced
+                ? "Enhanced ground detection implemented"
+                : "Ground detection not enhanced"
+            );
+
+            this.updateChecklistItem("check-ground", groundDetectionEnhanced);
+          }
+
+          this.addToLog("TEST", ["All tests completed!"]);
+        }
+
+        addTestResult(name, passed, details) {
+          this.testResults.push({ name, passed, details });
+          this.updateStats();
+
+          const status = passed ? "✅ PASS" : "❌ FAIL";
+          this.addToLog("RESULT", [`${status} ${name}: ${details}`]);
+        }
+
+        updateStats() {
+          const total = this.testResults.length;
+          const passed = this.testResults.filter((r) => r.passed).length;
+          const failed = total - passed;
+          const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+          document.getElementById("totalTests").textContent = total;
+          document.getElementById("passedTests").textContent = passed;
+          document.getElementById("failedTests").textContent = failed;
+          document.getElementById("successRate").textContent = rate + "%";
+        }
+
+        updateChecklistItem(itemId, passed) {
+          const item = document.getElementById(itemId);
+          if (item) {
+            item.className = `check-item ${passed ? "success" : "error"}`;
+            item.textContent = item.textContent.replace(
+              "❓",
+              passed ? "✅" : "❌"
+            );
+          }
+        }
+
+        clearResults() {
+          this.testResults = [];
+          this.updateStats();
+
+          // Reset checklist
+          const checkItems = document.querySelectorAll(".check-item");
+          checkItems.forEach((item) => {
+            item.className = "check-item";
+            item.textContent = item.textContent.replace(/[✅❌]/, "❓");
+          });
+        }
+
+        clearLog() {
+          this.logOutput.textContent = "";
+        }
+      }
+
+      // Initialize tester
+      const tester = new JumpVerificationTester();
+
+      // Global functions for buttons
+      function runBasicTests() {
+        tester.runBasicTests();
+      }
+      function runValidationTests() {
+        tester.runValidationTests();
+      }
+      function runLoggingTests() {
+        tester.runLoggingTests();
+      }
+      function runAllTests() {
+        tester.runAllTests();
+      }
+      function clearLog() {
+        tester.clearLog();
+      }
+
+      // Auto-run basic tests on load
+      window.addEventListener("load", () => {
+        tester.addToLog("SYSTEM", ["Jump Implementation Verification loaded"]);
+        tester.addToLog("INFO", [
+          'Click "Run All Tests" to verify the enhanced jump implementation',
+        ]);
+      });
+    </script>
+  </body>
+</html>

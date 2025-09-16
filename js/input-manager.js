@@ -8,10 +8,17 @@
  * Manages keyboard input states and key bindings for player controls
  */
 class InputManager {
-  constructor() {
+  constructor(canvas = null) {
     // Key state tracking
     this.keyStates = new Map();
     this.previousKeyStates = new Map();
+
+    // Enhanced input detection properties
+    this.lastKeyEventTime = new Map(); // Track timing for duplicate detection
+    this.eventSequenceId = 0; // Unique ID for event sequences
+    this.duplicateEventThreshold = 10; // ms threshold for duplicate detection
+    this.eventHistory = []; // Recent event history for debugging
+    this.maxEventHistory = 100; // Maximum events to keep in history
 
     // Key bindings for player actions
     this.keyBindings = {
@@ -34,32 +41,70 @@ class InputManager {
     // Action states (derived from key states)
     this.actionStates = new Map();
 
+    // Focus management
+    this.canvas = canvas;
+    this.focusManager = null;
+
+    // Enhanced event capture settings
+    this.eventCaptureOptions = {
+      passive: false,
+      capture: true, // Use capture phase for better event handling
+    };
+
+    // Initialize focus manager if canvas is provided
+    if (this.canvas) {
+      this.focusManager = new FocusManager(this.canvas);
+    }
+
     // Initialize event listeners
     this.initEventListeners();
 
-    console.log("InputManager initialized");
+    console.log("InputManager initialized with enhanced input detection");
   }
 
   /**
-   * Initialize keyboard event listeners
+   * Initialize keyboard event listeners with enhanced capture
    */
   initEventListeners() {
-    // Keydown event
+    // Enhanced keydown event with improved capture
     document.addEventListener(
       "keydown",
       (event) => {
-        this.handleKeyDown(event);
+        this.handleKeyDownEnhanced(event);
       },
-      { passive: false }
+      this.eventCaptureOptions
     );
 
-    // Keyup event
+    // Enhanced keyup event with improved capture
     document.addEventListener(
       "keyup",
       (event) => {
-        this.handleKeyUp(event);
+        this.handleKeyUpEnhanced(event);
       },
-      { passive: false }
+      this.eventCaptureOptions
+    );
+
+    // Additional event listeners for better input capture
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        // Backup event listener in case document listener fails
+        if (this.isGameKey(event.code)) {
+          this.handleKeyDownEnhanced(event);
+        }
+      },
+      this.eventCaptureOptions
+    );
+
+    window.addEventListener(
+      "keyup",
+      (event) => {
+        // Backup event listener in case document listener fails
+        if (this.isGameKey(event.code)) {
+          this.handleKeyUpEnhanced(event);
+        }
+      },
+      this.eventCaptureOptions
     );
 
     // Prevent context menu on right click (for future mouse support)
@@ -69,54 +114,135 @@ class InputManager {
 
     // Handle window focus/blur to reset key states
     window.addEventListener("blur", () => {
-      this.resetAllKeys();
+      this.handleFocusLoss();
     });
 
-    // Ensure document has focus for keyboard events
-    document.addEventListener("click", () => {
-      document.body.focus();
+    // Handle visibility change to reset key states
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        this.handleFocusLoss();
+      }
     });
 
-    // Make sure the document is focusable
-    if (!document.body.hasAttribute("tabindex")) {
-      document.body.setAttribute("tabindex", "0");
+    // Ensure canvas focus for keyboard events (if canvas is available)
+    if (this.canvas) {
+      document.addEventListener("click", (event) => {
+        // If click is outside canvas, try to restore focus
+        if (event.target !== this.canvas && this.focusManager) {
+          setTimeout(() => {
+            this.focusManager.ensureCanvasFocus();
+          }, 10);
+        }
+      });
+    } else {
+      // Fallback to document body focus
+      document.addEventListener("click", () => {
+        document.body.focus();
+      });
+
+      // Make sure the document is focusable
+      if (!document.body.hasAttribute("tabindex")) {
+        document.body.setAttribute("tabindex", "0");
+      }
     }
   }
 
   /**
-   * Handle keydown events
+   * Enhanced keydown event handler with improved duplicate detection and preventDefault timing
    */
-  handleKeyDown(event) {
+  handleKeyDownEnhanced(event) {
     const keyCode = event.code;
+    const currentTime = performance.now();
 
-    // Prevent default behavior for game keys
-    if (this.isGameKey(keyCode)) {
+    // Check for duplicate events
+    if (this.isDuplicateKeyEvent(keyCode, "keydown", currentTime)) {
+      console.log(`Duplicate keydown event detected for ${keyCode}, ignoring`);
+      return;
+    }
+
+    // Record event in history for debugging
+    this.recordEventInHistory("keydown", keyCode, currentTime, event);
+
+    // Ensure focus before processing input
+    this.ensureFocus();
+
+    // Apply preventDefault early and appropriately for game keys
+    const isGameKey = this.isGameKey(keyCode);
+    if (isGameKey) {
+      // Prevent default behavior immediately for game keys
       event.preventDefault();
       event.stopPropagation();
     }
 
     // Set key state to pressed if not already held
-    if (!this.keyStates.get(keyCode)) {
+    const wasPressed = this.keyStates.get(keyCode);
+    if (!wasPressed) {
       this.keyStates.set(keyCode, true);
-      console.log(`Key pressed: ${keyCode}`); // デバッグログ追加
+      this.lastKeyEventTime.set(keyCode + "_keydown", currentTime);
+
+      // Enhanced logging for jump key
+      if (keyCode === "Space") {
+        console.log(
+          `Space key pressed at ${currentTime.toFixed(2)}ms - Focus state:`,
+          this.getFocusState()
+        );
+      } else {
+        console.log(`Key pressed: ${keyCode}`);
+      }
+    } else {
+      // Key is being held - this is a repeat event
+      console.log(`Key held (repeat): ${keyCode}`);
     }
   }
 
   /**
-   * Handle keyup events
+   * Enhanced keyup event handler with improved duplicate detection and preventDefault timing
    */
-  handleKeyUp(event) {
+  handleKeyUpEnhanced(event) {
     const keyCode = event.code;
+    const currentTime = performance.now();
 
-    // Prevent default behavior for game keys
-    if (this.isGameKey(keyCode)) {
+    // Check for duplicate events
+    if (this.isDuplicateKeyEvent(keyCode, "keyup", currentTime)) {
+      console.log(`Duplicate keyup event detected for ${keyCode}, ignoring`);
+      return;
+    }
+
+    // Record event in history for debugging
+    this.recordEventInHistory("keyup", keyCode, currentTime, event);
+
+    // Apply preventDefault early and appropriately for game keys
+    const isGameKey = this.isGameKey(keyCode);
+    if (isGameKey) {
+      // Prevent default behavior immediately for game keys
       event.preventDefault();
       event.stopPropagation();
     }
 
     // Set key state to released
     this.keyStates.set(keyCode, false);
-    console.log(`Key released: ${keyCode}`); // デバッグログ追加
+    this.lastKeyEventTime.set(keyCode + "_keyup", currentTime);
+
+    // Enhanced logging for jump key
+    if (keyCode === "Space") {
+      console.log(`Space key released at ${currentTime.toFixed(2)}ms`);
+    } else {
+      console.log(`Key released: ${keyCode}`);
+    }
+  }
+
+  /**
+   * Legacy keydown handler (for backward compatibility)
+   */
+  handleKeyDown(event) {
+    this.handleKeyDownEnhanced(event);
+  }
+
+  /**
+   * Legacy keyup handler (for backward compatibility)
+   */
+  handleKeyUp(event) {
+    this.handleKeyUpEnhanced(event);
   }
 
   /**
@@ -129,6 +255,69 @@ class InputManager {
       }
     }
     return false;
+  }
+
+  /**
+   * Check if this is a duplicate key event that should be ignored
+   */
+  isDuplicateKeyEvent(keyCode, eventType, currentTime) {
+    const eventKey = keyCode + "_" + eventType;
+    const lastEventTime = this.lastKeyEventTime.get(eventKey);
+
+    if (
+      lastEventTime &&
+      currentTime - lastEventTime < this.duplicateEventThreshold
+    ) {
+      return true; // This is likely a duplicate event
+    }
+
+    return false;
+  }
+
+  /**
+   * Record event in history for debugging and analysis
+   */
+  recordEventInHistory(eventType, keyCode, timestamp, originalEvent) {
+    const eventRecord = {
+      id: ++this.eventSequenceId,
+      type: eventType,
+      keyCode: keyCode,
+      timestamp: timestamp,
+      focusState: this.getFocusState(),
+      preventDefault: originalEvent.defaultPrevented,
+      isTrusted: originalEvent.isTrusted,
+      target: originalEvent.target ? originalEvent.target.tagName : "unknown",
+    };
+
+    this.eventHistory.push(eventRecord);
+
+    // Keep history size manageable
+    if (this.eventHistory.length > this.maxEventHistory) {
+      this.eventHistory.shift(); // Remove oldest event
+    }
+  }
+
+  /**
+   * Get recent event history for debugging
+   */
+  getEventHistory(filterKeyCode = null, maxEvents = 20) {
+    let history = this.eventHistory.slice(-maxEvents);
+
+    if (filterKeyCode) {
+      history = history.filter((event) => event.keyCode === filterKeyCode);
+    }
+
+    return history;
+  }
+
+  /**
+   * Clear event history (useful for testing)
+   */
+  clearEventHistory() {
+    this.eventHistory = [];
+    this.lastKeyEventTime.clear();
+    this.eventSequenceId = 0;
+    console.log("Event history cleared");
   }
 
   /**
@@ -284,13 +473,70 @@ class InputManager {
   }
 
   /**
+   * Ensure canvas has focus for input
+   */
+  ensureFocus() {
+    if (this.focusManager) {
+      return this.focusManager.ensureCanvasFocus();
+    }
+    return true;
+  }
+
+  /**
+   * Handle focus loss event
+   */
+  handleFocusLoss() {
+    this.resetAllKeys();
+    console.log("Focus lost - key states reset");
+  }
+
+  /**
+   * Get focus state information
+   */
+  getFocusState() {
+    if (this.focusManager) {
+      return this.focusManager.getFocusState();
+    }
+    return {
+      hasFocus: document.activeElement === document.body,
+      activeElement: false,
+      documentHidden: document.hidden,
+      windowHasFocus: document.hasFocus ? document.hasFocus() : false,
+      indicatorVisible: false,
+    };
+  }
+
+  /**
+   * Force focus recovery
+   */
+  forceFocusRecovery() {
+    if (this.focusManager) {
+      return this.focusManager.forceFocusRecovery();
+    }
+
+    // Fallback focus recovery
+    try {
+      if (this.canvas) {
+        this.canvas.focus();
+      } else {
+        document.body.focus();
+      }
+      return true;
+    } catch (error) {
+      console.warn("Focus recovery failed:", error);
+      return false;
+    }
+  }
+
+  /**
    * Reset all key states (useful when window loses focus)
    */
   resetAllKeys() {
     this.keyStates.clear();
     this.previousKeyStates.clear();
     this.actionStates.clear();
-    console.log("All key states reset");
+    this.lastKeyEventTime.clear();
+    console.log("All key states and event timing reset");
   }
 
   /**
@@ -319,6 +565,54 @@ class InputManager {
       activeActions,
       totalKeysTracked: this.keyStates.size,
       keyBindings: this.keyBindings,
+      focusState: this.getFocusState(),
+      focusManager: !!this.focusManager,
+      // Enhanced input detection debug info
+      eventSequenceId: this.eventSequenceId,
+      eventHistorySize: this.eventHistory.length,
+      duplicateEventThreshold: this.duplicateEventThreshold,
+      lastEventTimes: Object.fromEntries(this.lastKeyEventTime),
+      recentEvents: this.getEventHistory(null, 5), // Last 5 events
+      eventCaptureOptions: this.eventCaptureOptions,
+    };
+  }
+
+  /**
+   * Clear event history (useful for testing)
+   */
+  clearEventHistory() {
+    this.eventHistory = [];
+    this.lastKeyEventTime.clear();
+    this.eventSequenceId = 0;
+    console.log("Event history cleared");
+  }
+
+  /**
+   * Test space key input detection (for debugging)
+   */
+  testSpaceKeyDetection() {
+    console.log("=== Space Key Detection Test ===");
+    console.log("Current space key state:", this.keyStates.get("Space"));
+    console.log("Jump action state:", this.actionStates.get("jump"));
+    console.log("Focus state:", this.getFocusState());
+
+    const spaceEvents = this.getEventHistory("Space", 10);
+    console.log("Recent space key events:", spaceEvents);
+
+    const lastSpaceDown = this.lastKeyEventTime.get("Space_keydown");
+    const lastSpaceUp = this.lastKeyEventTime.get("Space_keyup");
+    console.log("Last space keydown time:", lastSpaceDown);
+    console.log("Last space keyup time:", lastSpaceUp);
+
+    return {
+      spaceKeyPressed: this.keyStates.get("Space"),
+      jumpActionActive: this.actionStates.get("jump"),
+      focusState: this.getFocusState(),
+      recentSpaceEvents: spaceEvents,
+      lastEventTimes: {
+        keydown: lastSpaceDown,
+        keyup: lastSpaceUp,
+      },
     };
   }
 
@@ -326,6 +620,12 @@ class InputManager {
    * Destroy the input manager and clean up event listeners
    */
   destroy() {
+    // Clean up focus manager
+    if (this.focusManager) {
+      this.focusManager.destroy();
+      this.focusManager = null;
+    }
+
     // Note: In a real implementation, we would store references to the event listeners
     // and remove them here. For this implementation, we'll rely on page unload cleanup.
     this.resetAllKeys();

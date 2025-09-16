@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Ground Detection Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .test-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .test-pass {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .test-fail {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .test-info {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+      .diagnostic-data {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Enhanced Ground Detection Test</h1>
+
+    <div class="test-container">
+      <h2>Test Controls</h2>
+      <button onclick="runBasicGroundDetectionTest()">
+        Run Basic Ground Detection Test
+      </button>
+      <button onclick="runGroundHistoryTest()">Run Ground History Test</button>
+      <button onclick="runConfidenceCalculationTest()">
+        Run Confidence Calculation Test
+      </button>
+      <button onclick="runDiagnosticsTest()">Run Diagnostics Test</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script src="js/player.js"></script>
+    <script>
+      let testResults = [];
+
+      function addTestResult(testName, passed, message, data = null) {
+        const result = {
+          testName,
+          passed,
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+        };
+        testResults.push(result);
+        displayResults();
+      }
+
+      function displayResults() {
+        const container = document.getElementById("test-results");
+        container.innerHTML = "";
+
+        testResults.forEach((result) => {
+          const div = document.createElement("div");
+          div.className = "test-container";
+
+          const resultDiv = document.createElement("div");
+          resultDiv.className = `test-result ${
+            result.passed ? "test-pass" : "test-fail"
+          }`;
+          resultDiv.innerHTML = `
+                    <strong>${result.testName}</strong><br>
+                    ${result.message}<br>
+                    <small>Time: ${result.timestamp}</small>
+                `;
+
+          div.appendChild(resultDiv);
+
+          if (result.data) {
+            const dataDiv = document.createElement("div");
+            dataDiv.className = "diagnostic-data";
+            dataDiv.textContent = JSON.stringify(result.data, null, 2);
+            div.appendChild(dataDiv);
+          }
+
+          container.appendChild(div);
+        });
+      }
+
+      function clearResults() {
+        testResults = [];
+        displayResults();
+      }
+
+      function runBasicGroundDetectionTest() {
+        try {
+          // Create a test player
+          const player = new Player(100, 100);
+
+          // Test 1: Initial state
+          const initialCheck = player.enhancedGroundCheck();
+          const test1Pass =
+            typeof initialCheck === "object" &&
+            initialCheck.hasOwnProperty("isOnGround") &&
+            initialCheck.hasOwnProperty("confidence") &&
+            initialCheck.hasOwnProperty("details");
+
+          addTestResult(
+            "Basic Ground Detection - Structure",
+            test1Pass,
+            test1Pass
+              ? "Enhanced ground check returns proper structure"
+              : "Enhanced ground check structure is invalid",
+            initialCheck
+          );
+
+          // Test 2: Ground detection methods
+          const positionCheck = player.checkGroundByPosition();
+          const velocityCheck = player.checkGroundByVelocity();
+
+          const test2Pass =
+            typeof positionCheck === "boolean" &&
+            typeof velocityCheck === "boolean";
+
+          addTestResult(
+            "Basic Ground Detection - Methods",
+            test2Pass,
+            test2Pass
+              ? "Individual ground check methods work correctly"
+              : "Ground check methods failed",
+            { positionCheck, velocityCheck }
+          );
+
+          // Test 3: Confidence calculation
+          const confidence = player.calculateGroundConfidence({
+            physicsGroundCheck: true,
+            positionGroundCheck: false,
+            velocityGroundCheck: true,
+          });
+
+          const test3Pass =
+            typeof confidence === "number" &&
+            confidence >= 0 &&
+            confidence <= 1;
+
+          addTestResult(
+            "Basic Ground Detection - Confidence",
+            test3Pass,
+            test3Pass
+              ? `Confidence calculation works (${confidence.toFixed(2)})`
+              : "Confidence calculation failed",
+            { confidence }
+          );
+        } catch (error) {
+          addTestResult(
+            "Basic Ground Detection - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runGroundHistoryTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Perform multiple ground checks to build history
+          for (let i = 0; i < 5; i++) {
+            player.enhancedGroundCheck();
+            // Simulate time passing
+            setTimeout(() => {}, 10);
+          }
+
+          const historyLength = player.groundDetectionHistory.length;
+          const test1Pass = historyLength === 5;
+
+          addTestResult(
+            "Ground History - Recording",
+            test1Pass,
+            test1Pass
+              ? `History recorded correctly (${historyLength} entries)`
+              : `History recording failed (${historyLength} entries)`,
+            { historyLength, history: player.groundDetectionHistory }
+          );
+
+          // Test history limit
+          for (let i = 0; i < 50; i++) {
+            player.enhancedGroundCheck();
+          }
+
+          const limitedHistoryLength = player.groundDetectionHistory.length;
+          const test2Pass = limitedHistoryLength <= 50;
+
+          addTestResult(
+            "Ground History - Limit",
+            test2Pass,
+            test2Pass
+              ? `History limit enforced (${limitedHistoryLength} entries)`
+              : `History limit failed (${limitedHistoryLength} entries)`,
+            { limitedHistoryLength }
+          );
+        } catch (error) {
+          addTestResult(
+            "Ground History - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runConfidenceCalculationTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Test different confidence scenarios
+          const scenarios = [
+            { physics: true, position: true, velocity: true, expected: 1.0 },
+            { physics: true, position: false, velocity: false, expected: 0.6 },
+            { physics: false, position: true, velocity: false, expected: 0.3 },
+            { physics: false, position: false, velocity: true, expected: 0.1 },
+            { physics: false, position: false, velocity: false, expected: 0.0 },
+          ];
+
+          let allTestsPass = true;
+          const results = [];
+
+          scenarios.forEach((scenario, index) => {
+            const confidence = player.calculateGroundConfidence({
+              physicsGroundCheck: scenario.physics,
+              positionGroundCheck: scenario.position,
+              velocityGroundCheck: scenario.velocity,
+            });
+
+            const tolerance = 0.01;
+            const testPass =
+              Math.abs(confidence - scenario.expected) < tolerance;
+
+            if (!testPass) allTestsPass = false;
+
+            results.push({
+              scenario: index + 1,
+              expected: scenario.expected,
+              actual: confidence,
+              passed: testPass,
+            });
+          });
+
+          addTestResult(
+            "Confidence Calculation - Scenarios",
+            allTestsPass,
+            allTestsPass
+              ? "All confidence calculation scenarios passed"
+              : "Some confidence calculations failed",
+            { results }
+          );
+        } catch (error) {
+          addTestResult(
+            "Confidence Calculation - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runDiagnosticsTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Set up some test data
+          player.isOnGround = true;
+          player.lastGroundContact = performance.now() - 1000; // 1 second ago
+
+          // Perform some ground checks
+          for (let i = 0; i < 3; i++) {
+            player.enhancedGroundCheck();
+          }
+
+          // Test diagnostics
+          const diagnostics = player.getGroundDetectionDiagnostics();
+
+          const test1Pass =
+            typeof diagnostics === "object" &&
+            diagnostics.hasOwnProperty("lastGroundContact") &&
+            diagnostics.hasOwnProperty("timeSinceLastContact") &&
+            diagnostics.hasOwnProperty("historyLength") &&
+            diagnostics.hasOwnProperty("averageConfidence");
+
+          addTestResult(
+            "Diagnostics - Structure",
+            test1Pass,
+            test1Pass
+              ? "Diagnostics structure is correct"
+              : "Diagnostics structure is invalid",
+            diagnostics
+          );
+
+          // Test state inclusion
+          const state = player.getState();
+          const test2Pass =
+            state.hasOwnProperty("lastGroundContact") &&
+            state.hasOwnProperty("groundDetectionHistory") &&
+            state.hasOwnProperty("groundTolerance");
+
+          addTestResult(
+            "Diagnostics - State Integration",
+            test2Pass,
+            test2Pass
+              ? "Ground detection data included in player state"
+              : "Ground detection data missing from player state",
+            {
+              lastGroundContact: state.lastGroundContact,
+              historyLength: state.groundDetectionHistory.length,
+              groundTolerance: state.groundTolerance,
+            }
+          );
+        } catch (error) {
+          addTestResult(
+            "Diagnostics - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      // Run initial test on page load
+      window.addEventListener("load", () => {
+        addTestResult(
+          "System Check",
+          true,
+          "Enhanced Ground Detection Test System Loaded",
+          { timestamp: performance.now() }
+        );
+      });
+    </script>
+  </body>
+</html>

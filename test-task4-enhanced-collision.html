@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 4: Enhanced Collision Resolution Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin-bottom: 30px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .status.pass {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .status.fail {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .status.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .log-output {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+      }
+      .stats-table th,
+      .stats-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .stats-table th {
+        background-color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Task 4: Enhanced Collision Resolution System Test</h1>
+      <p>
+        Testing the enhanced collision resolution system with validation, ground
+        contact tracking, and invalid collision detection.
+      </p>
+
+      <div class="test-section">
+        <h3>Test 1: Enhanced Collision Resolution Method</h3>
+        <button onclick="testEnhancedCollisionMethod()">Run Test</button>
+        <div id="test1-status" class="status info">Ready to test</div>
+        <div id="test1-log" class="log-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Test 2: Ground Collision Validation</h3>
+        <button onclick="testGroundCollisionValidation()">Run Test</button>
+        <div id="test2-status" class="status info">Ready to test</div>
+        <div id="test2-log" class="log-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Test 3: Ground Contact Time Recording</h3>
+        <button onclick="testGroundContactRecording()">Run Test</button>
+        <div id="test3-status" class="status info">Ready to test</div>
+        <div id="test3-log" class="log-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Test 4: Invalid Collision Detection and Reporting</h3>
+        <button onclick="testInvalidCollisionDetection()">Run Test</button>
+        <div id="test4-status" class="status info">Ready to test</div>
+        <div id="test4-log" class="log-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Test 5: Integration with Stage Collision System</h3>
+        <button onclick="testStageIntegration()">Run Test</button>
+        <div id="test5-status" class="status info">Ready to test</div>
+        <div id="test5-log" class="log-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Collision Statistics</h3>
+        <button onclick="showCollisionStats()">Show Stats</button>
+        <button onclick="resetCollisionStats()">Reset Stats</button>
+        <div id="stats-display"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Run All Tests</h3>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <div id="overall-status" class="status info">
+          Ready to run all tests
+        </div>
+      </div>
+    </div>
+
+    <!-- Include game engine files -->
+    <script src="js/physics-engine.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+
+    <script>
+      let physicsEngine;
+      let testPlayer;
+      let testPlatform;
+      let testStage;
+      let testResults = [];
+
+      // Initialize test environment
+      function initializeTestEnvironment() {
+          physicsEngine = new PhysicsEngine();
+
+          // Create test player
+          testPlayer = new Player(100, 100);
+
+          // Create test platform
+          testPlatform = {
+              position: { x: 50, y: 200 },
+              size: { width: 200, height: 20 },
+              type: "solid"
+          };
+
+          // Create test stage
+          testStage = new Stage(1, "Test Stage");
+          testStage.addPlatform(testPlatform);
+
+          log("Test environment initialized");
+      }
+
+      function log(message, elementId = null) {
+          const timestamp = new Date().toLocaleTimeString();
+          const logMessage = `[${timestamp}] ${message}`;
+          console.log(logMessage);
+
+          if (elementId) {
+              const element = document.getElementById(elementId);
+              if (element) {
+                  element.innerHTML += logMessage + '\n';
+                  element.scrollTop = element.scrollHeight;
+              }
+          }
+      }
+
+      function setStatus(elementId, status, message) {
+          const element = document.getElementById(elementId);
+          if (element) {
+              element.className = `status ${status}`;
+              element.textContent = message;
+          }
+      }
+
+      function clearLog(elementId) {
+          const element = document.getElementById(elementId);
+          if (element) {
+              element.innerHTML = '';
+          }
+      }
+
+      // Test 1: Enhanced Collision Resolution Method
+      function testEnhancedCollisionMethod() {
+          clearLog('test1-log');
+          log("Testing enhanced collision resolution method...", 'test1-log');
+
+          try {
+              initializeTestEnvironment();
+
+              // Check if enhanced method exists
+              if (typeof physicsEngine.resolveCollisionEnhanced !== 'function') {
+                  throw new Error("resolveCollisionEnhanced method not found");
+              }
+
+              // Position player to collide with platform from above
+              testPlayer.position = { x: 100, y: 150 };
+              testPlayer.velocity = { y: 50 }; // Moving downward
+
+              log(`Player initial position: (${testPlayer.position.x}, ${testPlayer.position.y})`, 'test1-log');
+              log(`Player velocity: (${testPlayer.velocity.x}, ${testPlayer.velocity.y})`, 'test1-log');
+              log(`Platform position: (${testPlatform.position.x}, ${testPlatform.position.y})`, 'test1-log');
+
+              // Test enhanced collision resolution
+              const resolution = physicsEngine.resolveCollisionEnhanced(testPlayer, testPlatform);
+
+              log(`Resolution result: ${JSON.stringify(resolution, null, 2)}`, 'test1-log');
+
+              // Verify resolution properties
+              const checks = [
+                  { name: "Resolution resolved", condition: resolution.resolved === true },
+                  { name: "Direction is bottom", condition: resolution.direction === "bottom" },
+                  { name: "Enhanced data exists", condition: resolution.enhanced !== undefined },
+                  { name: "Validation performed", condition: resolution.enhanced && resolution.enhanced.validated !== undefined },
+                  { name: "Timestamp recorded", condition: resolution.enhanced && resolution.enhanced.timestamp > 0 }
+              ];
+
+              let allPassed = true;
+              checks.forEach(check => {
+                  const status = check.condition ? "PASS" : "FAIL";
+                  log(`${check.name}: ${status}`, 'test1-log');
+                  if (!check.condition) allPassed = false;
+              });
+
+              if (allPassed) {
+                  setStatus('test1-status', 'pass', 'Enhanced collision resolution method working correctly');
+                  testResults.push({ test: 'Enhanced Collision Method', result: 'PASS' });
+              } else {
+                  setStatus('test1-status', 'fail', 'Enhanced collision resolution method has issues');
+                  testResults.push({ test: 'Enhanced Collision Method', result: 'FAIL' });
+              }
+
+          } catch (error) {
+              log(`Error: ${error.message}`, 'test1-log');
+              setStatus('test1-status', 'fail', `Test failed: ${error.message}`);
+              testResults.push({ test: 'Enhanced Collision Method', result: 'ERROR' });
+          }
+      }
+
+      // Test 2: Ground Collision Validation
+      function testGroundCollisionValidation() {
+          clearLog('test2-log');
+          log("Testing ground collision validation...", 'test2-log');
+
+          try {
+              initializeTestEnvironment();
+
+              // Test valid ground collision
+              testPlayer.position = { x: 100, y: 180 };
+              testPlayer.velocity = { y: 20 }; // Moving downward
+
+              log("Testing valid ground collision scenario", 'test2-log');
+              const validResolution = physicsEngine.resolveCollisionEnhanced(testPlayer, testPlatform);
+
+              log(`Valid collision validation: ${validResolution.enhanced?.validated}`, 'test2-log');
+
+              // Reset for invalid collision test
+              initializeTestEnvironment();
+              testPlayer.position = { x: 100, y: 180 };
+              testPlayer.velocity = { y: -50 }; // Moving upward (unusual for ground collision)
+
+              log("Testing potentially invalid ground collision scenario", 'test2-log');
+              const invalidResolution = physicsEngine.resolveCollisionEnhanced(testPlayer, testPlatform);
+
+              log(`Invalid collision validation: ${invalidResolution.enhanced?.validated}`, 'test2-log');
+
+              const checks = [
+                  { name: "Valid collision detected as valid", condition: validResolution.enhanced?.validated === true },
+                  { name: "Validation details provided", condition: validResolution.enhanced?.validationDetails !== undefined },
+                  { name: "Enhanced resolution has validation info", condition: invalidResolution.enhanced !== undefined }
+              ];
+
+              let allPassed = true;
+              checks.forEach(check => {
+                  const status = check.condition ? "PASS" : "FAIL";
+                  log(`${check.name}: ${status}`, 'test2-log');
+                  if (!check.condition) allPassed = false;
+              });
+
+              if (allPassed) {
+                  setStatus('test2-status', 'pass', 'Ground collision validation working correctly');
+                  testResults.push({ test: 'Ground Collision Validation', result: 'PASS' });
+              } else {
+                  setStatus('test2-status', 'fail', 'Ground collision validation has issues');
+                  testResults.push({ test: 'Ground Collision Validation', result: 'FAIL' });
+              }
+
+          } catch (error) {
+              log(`Error: ${error.message}`, 'test2-log');
+              setStatus('test2-status', 'fail', `Test failed: ${error.message}`);
+              testResults.push({ test: 'Ground Collision Validation', result: 'ERROR' });
+          }
+      }
+
+      // Test 3: Ground Contact Time Recording
+      function testGroundContactRecording() {
+          clearLog('test3-log');
+          log("Testing ground contact time recording...", 'test3-log');
+
+          try {
+              initializeTestEnvironment();
+
+              // Record initial ground contact time
+              const initialGroundContact = testPlayer.lastGroundContact;
+              log(`Initial ground contact time: ${initialGroundContact}`, 'test3-log');
+
+              // Position player for ground collision
+              testPlayer.position = { x: 100, y: 180 };
+              testPlayer.velocity = { y: 20 };
+
+              // Perform collision resolution
+              const resolution = physicsEngine.resolveCollisionEnhanced(testPlayer, testPlatform);
+
+              log(`Ground contact recorded: ${resolution.enhanced?.groundContactRecorded}`, 'test3-log');
+              log(`New ground contact time: ${testPlayer.lastGroundContact}`, 'test3-log');
+
+              const checks = [
+                  { name: "Ground contact time updated", condition: testPlayer.lastGroundContact > initialGroundContact },
+                  { name: "Ground contact recorded flag set", condition: resolution.enhanced?.groundContactRecorded === true },
+                  { name: "Ground contact time is recent", condition: (performance.now() - testPlayer.lastGroundContact) < 1000 }
+              ];
+
+              let allPassed = true;
+              checks.forEach(check => {
+                  const status = check.condition ? "PASS" : "FAIL";
+                  log(`${check.name}: ${status}`, 'test3-log');
+                  if (!check.condition) allPassed = false;
+              });
+
+              if (allPassed) {
+                  setStatus('test3-status', 'pass', 'Ground contact time recording working correctly');
+                  testResults.push({ test: 'Ground Contact Recording', result: 'PASS' });
+              } else {
+                  setStatus('test3-status', 'fail', 'Ground contact time recording has issues');
+                  testResults.push({ test: 'Ground Contact Recording', result: 'FAIL' });
+              }
+
+          } catch (error) {
+              log(`Error: ${error.message}`, 'test3-log');
+              setStatus('test3-status', 'fail', `Test failed: ${error.message}`);
+              testResults.push({ test: 'Ground Contact Recording', result: 'ERROR' });
+          }
+      }
+
+      // Test 4: Invalid Collision Detection and Reporting
+      function testInvalidCollisionDetection() {
+          clearLog('test4-log');
+          log("Testing invalid collision detection and reporting...", 'test4-log');
+
+          try {
+              initializeTestEnvironment();
+
+              // Reset collision stats
+              physicsEngine.resetInvalidCollisionStats();
+
+              // Create an obviously invalid collision scenario
+              testPlayer.position = { x: 100, y: 300 }; // Far below platform
+              testPlayer.velocity = { y: -100 }; // Moving upward rapidly
+
+              log("Creating invalid collision scenario", 'test4-log');
+              log(`Player position: (${testPlayer.position.x}, ${testPlayer.position.y})`, 'test4-log');
+              log(`Player velocity: (${testPlayer.velocity.x}, ${testPlayer.velocity.y})`, 'test4-log');
+
+              // Force a collision by moving player into platform
+              testPlayer.position.y = 190; // Overlapping with platform
+
+              const resolution = physicsEngine.resolveCollisionEnhanced(testPlayer, testPlatform);
+
+              log(`Resolution validated: ${resolution.enhanced?.validated}`, 'test4-log');
+
+              // Check collision stats
+              const stats = physicsEngine.getInvalidCollisionStats();
+              log(`Invalid collision stats: ${JSON.stringify(stats)}`, 'test4-log');
+
+              const checks = [
+                  { name: "Invalid collision stats method exists", condition: typeof physicsEngine.getInvalidCollisionStats === 'function' },
+                  { name: "Reset stats method exists", condition: typeof physicsEngine.resetInvalidCollisionStats === 'function' },
+                  { name: "Stats object has required properties", condition: stats && typeof stats.total === 'number' }
+              ];
+
+              let allPassed = true;
+              checks.forEach(check => {
+                  const status = check.condition ? "PASS" : "FAIL";
+                  log(`${check.name}: ${status}`, 'test4-log');
+                  if (!check.condition) allPassed = false;
+              });
+
+              if (allPassed) {
+                  setStatus('test4-status', 'pass', 'Invalid collision detection and reporting working correctly');
+                  testResults.push({ test: 'Invalid Collision Detection', result: 'PASS' });
+              } else {
+                  setStatus('test4-status', 'fail', 'Invalid collision detection and reporting has issues');
+                  testResults.push({ test: 'Invalid Collision Detection', result: 'FAIL' });
+              }
+
+          } catch (error) {
+              log(`Error: ${error.message}`, 'test4-log');
+              setStatus('test4-status', 'fail', `Test failed: ${error.message}`);
+              testResults.push({ test: 'Invalid Collision Detection', result: 'ERROR' });
+          }
+      }
+
+      // Test 5: Integration with Stage Collision System
+      function testStageIntegration() {
+          clearLog('test5-log');
+          log("Testing integration with stage collision system...", 'test5-log');
+
+          try {
+              initializeTestEnvironment();
+
+              // Position player to collide with platform
+              testPlayer.position = { x: 100, y: 180 };
+              testPlayer.velocity = { y: 20 };
+
+              log("Testing stage collision system integration", 'test5-log');
+
+              // Use stage collision system
+              const collisions = testStage.checkPlatformCollisions(testPlayer, physicsEngine);
+
+              log(`Number of collisions detected: ${collisions.length}`, 'test5-log');
+
+              if (collisions.length > 0) {
+                  const collision = collisions[0];
+                  log(`Collision resolution: ${JSON.stringify(collision.resolution, null, 2)}`, 'test5-log');
+
+                  const checks = [
+                      { name: "Collision detected", condition: collisions.length > 0 },
+                      { name: "Enhanced resolution used", condition: collision.resolution.enhanced !== undefined },
+                      { name: "Platform reference exists", condition: collision.platform !== undefined },
+                      { name: "Resolution has timestamp", condition: collision.resolution.enhanced?.timestamp > 0 }
+                  ];
+
+                  let allPassed = true;
+                  checks.forEach(check => {
+                      const status = check.condition ? "PASS" : "FAIL";
+                      log(`${check.name}: ${status}`, 'test5-log');
+                      if (!check.condition) allPassed = false;
+                  });
+
+                  if (allPassed) {
+                      setStatus('test5-status', 'pass', 'Stage integration working correctly');
+                      testResults.push({ test: 'Stage Integration', result: 'PASS' });
+                  } else {
+                      setStatus('test5-status', 'fail', 'Stage integration has issues');
+                      testResults.push({ test: 'Stage Integration', result: 'FAIL' });
+                  }
+              } else {
+                  log("No collisions detected - this might indicate an issue", 'test5-log');
+                  setStatus('test5-status', 'fail', 'No collisions detected in stage integration test');
+                  testResults.push({ test: 'Stage Integration', result: 'FAIL' });
+              }
+
+          } catch (error) {
+              log(`Error: ${error.message}`, 'test5-log');
+              setStatus('test5-status', 'fail', `Test failed: ${error.message}`);
+              testResults.push({ test: 'Stage Integration', result: 'ERROR' });
+          }
+      }
+
+      // Show collision statistics
+      function showCollisionStats() {
+          if (!physicsEngine) {
+              initializeTestEnvironment();
+          }
+
+          const stats = physicsEngine.getInvalidCollisionStats();
+
+          let statsHtml = '<h4>Collision Statistics</h4>';
+          statsHtml += '<table class="stats-table">';
+          statsHtml += '<tr><th>Metric</th><th>Value</th></tr>';
+          statsHtml += `<tr><td>Total Invalid Collisions</td><td>${stats.total}</td></tr>`;
+          statsHtml += `<tr><td>Last Reported</td><td>${stats.lastReported ? new Date(stats.lastReported).toLocaleTimeString() : 'Never'}</td></tr>';
+
+          if (Object.keys(stats.byType).length > 0) {
+              statsHtml += '<tr><td colspan="2"><strong>By Type:</strong></td></tr>';
+              Object.entries(stats.byType).forEach(([type, count]) => {
+                  statsHtml += `<tr><td>&nbsp;&nbsp;${type}</td><td>${count}</td></tr>`;
+              });
+          }
+
+          statsHtml += '</table>';
+
+          document.getElementById('stats-display').innerHTML = statsHtml;
+      }
+
+      // Reset collision statistics
+      function resetCollisionStats() {
+          if (!physicsEngine) {
+              initializeTestEnvironment();
+          }
+
+          physicsEngine.resetInvalidCollisionStats();
+          document.getElementById('stats-display').innerHTML = '<p>Collision statistics reset.</p>';
+      }
+
+      // Run all tests
+      function runAllTests() {
+          testResults = [];
+          setStatus('overall-status', 'info', 'Running all tests...');
+
+          // Run tests sequentially with delays to allow UI updates
+          setTimeout(() => {
+              testEnhancedCollisionMethod();
+              setTimeout(() => {
+                  testGroundCollisionValidation();
+                  setTimeout(() => {
+                      testGroundContactRecording();
+                      setTimeout(() => {
+                          testInvalidCollisionDetection();
+                          setTimeout(() => {
+                              testStageIntegration();
+                              setTimeout(() => {
+                                  // Show final results
+                                  const passed = testResults.filter(r => r.result === 'PASS').length;
+                                  const total = testResults.length;
+
+                                  if (passed === total) {
+                                      setStatus('overall-status', 'pass', `All tests passed! (${passed}/${total})`);
+                                  } else {
+                                      setStatus('overall-status', 'fail', `${passed}/${total} tests passed`);
+                                  }
+
+                                  showCollisionStats();
+                              }, 500);
+                          }, 500);
+                      }, 500);
+                  }, 500);
+              }, 500);
+          }, 500);
+      }
+
+      // Initialize on page load
+      window.addEventListener('load', () => {
+          log("Page loaded, ready for testing");
+      });
+    </script>
+  </body>
+</html>

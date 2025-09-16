@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Final Integration Test - Space Key Jump Fix</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .test-controls {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .btn-primary {
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+      }
+
+      .btn-secondary {
+        background: linear-gradient(45deg, #2196f3, #1976d2);
+        color: white;
+      }
+
+      .btn-warning {
+        background: linear-gradient(45deg, #ff9800, #f57c00);
+        color: white;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .game-container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .game-area {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        background: #87ceeb;
+        max-width: 100%;
+        height: auto;
+      }
+
+      .test-results {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 15px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .result-category {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+      }
+
+      .result-category h3 {
+        margin: 0 0 15px 0;
+        color: #ffd700;
+        border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+        padding-bottom: 5px;
+      }
+
+      .test-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .test-item:last-child {
+        border-bottom: none;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+
+      .status-passed {
+        background: #4caf50;
+        color: white;
+      }
+
+      .status-failed {
+        background: #f44336;
+        color: white;
+      }
+
+      .status-running {
+        background: #ff9800;
+        color: white;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 15px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4caf50, #45a049);
+        width: 0%;
+        transition: width 0.3s ease;
+        border-radius: 10px;
+      }
+
+      .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #ffd700;
+      }
+
+      .stat-label {
+        font-size: 0.9em;
+        opacity: 0.8;
+        margin-top: 5px;
+      }
+
+      .recommendations {
+        background: rgba(255, 193, 7, 0.1);
+        border: 2px solid rgba(255, 193, 7, 0.3);
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+
+      .recommendations h3 {
+        color: #ffd700;
+        margin: 0 0 15px 0;
+      }
+
+      .recommendation-item {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+      }
+
+      .log-output {
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .log-entry {
+        margin: 2px 0;
+        padding: 2px 0;
+      }
+
+      .log-info {
+        color: #87ceeb;
+      }
+      .log-success {
+        color: #4caf50;
+      }
+      .log-warning {
+        color: #ff9800;
+      }
+      .log-error {
+        color: #f44336;
+      }
+
+      .instructions {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .instructions h3 {
+        color: #ffd700;
+        margin: 0 0 15px 0;
+      }
+
+      .instructions ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .instructions li {
+        margin: 8px 0;
+      }
+
+      @media (max-width: 768px) {
+        .game-container {
+          flex-direction: column;
+        }
+
+        .results-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .summary-stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Final Integration Test</h1>
+      <p style="text-align: center; font-size: 1.2em; margin-bottom: 30px">
+        Comprehensive end-to-end testing of all jump fixes
+      </p>
+
+      <div class="instructions">
+        <h3>📋 Test Instructions</h3>
+        <ul>
+          <li>
+            <strong>Complete Test:</strong> Runs all test categories
+            (End-to-End, Scenarios, Usability, Performance)
+          </li>
+          <li>
+            <strong>Quick Test:</strong> Runs essential tests only for faster
+            feedback
+          </li>
+          <li>
+            <strong>Performance Test:</strong> Focuses on performance metrics
+            and optimization verification
+          </li>
+          <li>
+            <strong>Manual Test:</strong> Allows manual testing with diagnostic
+            information
+          </li>
+        </ul>
+      </div>
+
+      <div class="test-controls">
+        <button id="runCompleteTest" class="btn btn-primary">
+          🚀 Run Complete Test
+        </button>
+        <button id="runQuickTest" class="btn btn-secondary">
+          ⚡ Quick Test
+        </button>
+        <button id="runPerformanceTest" class="btn btn-warning">
+          📊 Performance Test
+        </button>
+        <button id="enableManualTest" class="btn btn-secondary">
+          🎮 Manual Test Mode
+        </button>
+        <button id="clearResults" class="btn btn-secondary">
+          🗑️ Clear Results
+        </button>
+      </div>
+
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+
+      <div class="game-container">
+        <div class="game-area">
+          <canvas id="gameCanvas" width="800" height="400" tabindex="0">
+            Your browser does not support the HTML5 canvas element.
+          </canvas>
+        </div>
+      </div>
+
+      <div class="test-results">
+        <div class="summary-stats">
+          <div class="stat-card">
+            <div id="overallScore" class="stat-value">-</div>
+            <div class="stat-label">Overall Score</div>
+          </div>
+          <div class="stat-card">
+            <div id="testsRun" class="stat-value">0</div>
+            <div class="stat-label">Tests Run</div>
+          </div>
+          <div class="stat-card">
+            <div id="testsPassed" class="stat-value">0</div>
+            <div class="stat-label">Tests Passed</div>
+          </div>
+          <div class="stat-card">
+            <div id="testTime" class="stat-value">0ms</div>
+            <div class="stat-label">Test Time</div>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <div class="result-category">
+            <h3>🔄 End-to-End Tests</h3>
+            <div id="endToEndResults">
+              <div class="test-item">
+                <span>No tests run yet</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-category">
+            <h3>🎮 Scenario Tests</h3>
+            <div id="scenarioResults">
+              <div class="test-item">
+                <span>No tests run yet</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-category">
+            <h3>👤 Usability Tests</h3>
+            <div id="usabilityResults">
+              <div class="test-item">
+                <span>No tests run yet</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-category">
+            <h3>⚡ Performance Tests</h3>
+            <div id="performanceResults">
+              <div class="test-item">
+                <span>No tests run yet</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="recommendations" class="recommendations" style="display: none">
+          <h3>💡 Recommendations</h3>
+          <div id="recommendationsList"></div>
+        </div>
+
+        <div class="log-output">
+          <div id="logOutput">
+            <div class="log-entry log-info">
+              🚀 Final Integration Test System Ready
+            </div>
+            <div class="log-entry log-info">
+              Click "Run Complete Test" to start comprehensive testing
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Engine Scripts -->
+    <script src="js/physics-engine.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/main.js"></script>
+
+    <!-- Enhanced Systems -->
+    <script src="js/enhanced-input-manager.js"></script>
+    <script src="js/focus-manager.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+    <script src="js/enhanced-automated-test-system.js"></script>
+    <script src="js/performance-monitor.js"></script>
+
+    <!-- Final Integration Test System -->
+    <script src="js/final-integration-test-system.js"></script>
+
+    <script>
+      class FinalIntegrationTestRunner {
+        constructor() {
+          this.testSystem = null;
+          this.isRunning = false;
+          this.currentTest = null;
+          this.logEntries = [];
+
+          this.initializeUI();
+          this.setupEventListeners();
+          this.initializeGame();
+        }
+
+        initializeUI() {
+          // Initialize progress bar
+          this.progressBar = document.getElementById("progressFill");
+
+          // Initialize result containers
+          this.resultContainers = {
+            endToEnd: document.getElementById("endToEndResults"),
+            scenario: document.getElementById("scenarioResults"),
+            usability: document.getElementById("usabilityResults"),
+            performance: document.getElementById("performanceResults"),
+          };
+
+          // Initialize summary stats
+          this.summaryElements = {
+            overallScore: document.getElementById("overallScore"),
+            testsRun: document.getElementById("testsRun"),
+            testsPassed: document.getElementById("testsPassed"),
+            testTime: document.getElementById("testTime"),
+          };
+
+          // Initialize log output
+          this.logOutput = document.getElementById("logOutput");
+        }
+
+        setupEventListeners() {
+          document
+            .getElementById("runCompleteTest")
+            .addEventListener("click", () => {
+              this.runCompleteTest();
+            });
+
+          document
+            .getElementById("runQuickTest")
+            .addEventListener("click", () => {
+              this.runQuickTest();
+            });
+
+          document
+            .getElementById("runPerformanceTest")
+            .addEventListener("click", () => {
+              this.runPerformanceTest();
+            });
+
+          document
+            .getElementById("enableManualTest")
+            .addEventListener("click", () => {
+              this.enableManualTest();
+            });
+
+          document
+            .getElementById("clearResults")
+            .addEventListener("click", () => {
+              this.clearResults();
+            });
+
+          // Canvas focus management
+          const canvas = document.getElementById("gameCanvas");
+          canvas.addEventListener("click", () => {
+            canvas.focus();
+          });
+        }
+
+        async initializeGame() {
+          try {
+            this.log("🎮 Initializing game engine...", "info");
+
+            // Wait for game engine to be ready
+            let attempts = 0;
+            while (!window.gameEngine && attempts < 50) {
+              await this.wait(100);
+              attempts++;
+            }
+
+            if (window.gameEngine) {
+              this.log("✅ Game engine initialized successfully", "success");
+
+              // Initialize test system
+              this.testSystem = new FinalIntegrationTestSystem();
+              this.log("✅ Final integration test system ready", "success");
+            } else {
+              this.log("❌ Failed to initialize game engine", "error");
+            }
+          } catch (error) {
+            this.log(`❌ Initialization error: ${error.message}`, "error");
+          }
+        }
+
+        async runCompleteTest() {
+          if (this.isRunning) return;
+
+          this.log("🚀 Starting complete integration test...", "info");
+          this.setRunning(true);
+          this.clearResults();
+
+          try {
+            if (!this.testSystem) {
+              throw new Error("Test system not initialized");
+            }
+
+            const report = await this.testSystem.runCompleteIntegrationTest();
+            this.displayReport(report);
+            this.log("✅ Complete integration test finished", "success");
+          } catch (error) {
+            this.log(`❌ Complete test failed: ${error.message}`, "error");
+          } finally {
+            this.setRunning(false);
+          }
+        }
+
+        async runQuickTest() {
+          if (this.isRunning) return;
+
+          this.log("⚡ Starting quick test...", "info");
+          this.setRunning(true);
+          this.clearResults();
+
+          try {
+            if (!this.testSystem) {
+              throw new Error("Test system not initialized");
+            }
+
+            // Run essential tests only
+            await this.testSystem.runEndToEndTests();
+            await this.testSystem.runScenarioTests();
+
+            const report = this.testSystem.generateFinalReport();
+            this.displayReport(report);
+            this.log("✅ Quick test finished", "success");
+          } catch (error) {
+            this.log(`❌ Quick test failed: ${error.message}`, "error");
+          } finally {
+            this.setRunning(false);
+          }
+        }
+
+        async runPerformanceTest() {
+          if (this.isRunning) return;
+
+          this.log("📊 Starting performance test...", "info");
+          this.setRunning(true);
+          this.clearResults();
+
+          try {
+            if (!this.testSystem) {
+              throw new Error("Test system not initialized");
+            }
+
+            // Run performance tests only
+            await this.testSystem.runPerformanceTests();
+
+            const report = this.testSystem.generateFinalReport();
+            this.displayReport(report);
+            this.log("✅ Performance test finished", "success");
+          } catch (error) {
+            this.log(`❌ Performance test failed: ${error.message}`, "error");
+          } finally {
+            this.setRunning(false);
+          }
+        }
+
+        enableManualTest() {
+          this.log("🎮 Manual test mode enabled", "info");
+          this.log(
+            "Press SPACE, UP ARROW, W, or ENTER to test jumping",
+            "info"
+          );
+          this.log("F1 to toggle debug display", "info");
+
+          // Enable debug display if available
+          if (window.debugDisplaySystem) {
+            window.debugDisplaySystem.enabled = true;
+            this.log("✅ Debug display enabled", "success");
+          }
+
+          // Enable jump diagnostic system if available
+          if (window.jumpDiagnosticSystem) {
+            window.jumpDiagnosticSystem.isRecording = true;
+            this.log("✅ Jump diagnostic recording enabled", "success");
+          }
+
+          // Focus canvas for input
+          const canvas = document.getElementById("gameCanvas");
+          canvas.focus();
+        }
+
+        displayReport(report) {
+          // Update summary stats
+          this.summaryElements.overallScore.textContent = `${report.summary.overallScore}%`;
+          this.summaryElements.testsRun.textContent =
+            report.summary.overallTotal;
+          this.summaryElements.testsPassed.textContent =
+            report.summary.overallPassed;
+          this.summaryElements.testTime.textContent = `${report.summary.totalTime}ms`;
+
+          // Update progress bar
+          this.progressBar.style.width = `${report.summary.overallScore}%`;
+
+          // Display category results
+          this.displayCategoryResults("endToEnd", report.details.endToEndTests);
+          this.displayCategoryResults("scenario", report.details.scenarioTests);
+          this.displayCategoryResults(
+            "usability",
+            report.details.usabilityTests
+          );
+          this.displayCategoryResults(
+            "performance",
+            report.details.performanceTests
+          );
+
+          // Display recommendations
+          this.displayRecommendations(report.recommendations);
+
+          this.log(
+            `📊 Test Results: ${report.summary.overallScore}% (${report.summary.status})`,
+            report.summary.status === "PASSED" ? "success" : "warning"
+          );
+        }
+
+        displayCategoryResults(category, results) {
+          const container = this.resultContainers[category];
+          if (!container || !results) return;
+
+          container.innerHTML = "";
+
+          if (results.length === 0) {
+            container.innerHTML =
+              '<div class="test-item"><span>No tests in this category</span></div>';
+            return;
+          }
+
+          results.forEach((result) => {
+            const testItem = document.createElement("div");
+            testItem.className = "test-item";
+
+            const testName = result.name || result.scenario || "Unknown Test";
+            const status = result.passed ? "passed" : "failed";
+
+            testItem.innerHTML = `
+                        <span>${testName}</span>
+                        <span class="status-badge status-${status}">${status}</span>
+                    `;
+
+            container.appendChild(testItem);
+          });
+        }
+
+        displayRecommendations(recommendations) {
+          const recommendationsContainer =
+            document.getElementById("recommendations");
+          const recommendationsList = document.getElementById(
+            "recommendationsList"
+          );
+
+          if (!recommendations || recommendations.length === 0) {
+            recommendationsContainer.style.display = "none";
+            return;
+          }
+
+          recommendationsContainer.style.display = "block";
+          recommendationsList.innerHTML = "";
+
+          recommendations.forEach((rec) => {
+            const recItem = document.createElement("div");
+            recItem.className = "recommendation-item";
+            recItem.innerHTML = `
+                        <strong>${rec.category}:</strong> ${rec.recommendation}
+                        ${
+                          rec.issue
+                            ? `<br><small>Issue: ${rec.issue}</small>`
+                            : ""
+                        }
+                    `;
+            recommendationsList.appendChild(recItem);
+          });
+        }
+
+        clearResults() {
+          // Clear summary stats
+          this.summaryElements.overallScore.textContent = "-";
+          this.summaryElements.testsRun.textContent = "0";
+          this.summaryElements.testsPassed.textContent = "0";
+          this.summaryElements.testTime.textContent = "0ms";
+
+          // Reset progress bar
+          this.progressBar.style.width = "0%";
+
+          // Clear category results
+          Object.values(this.resultContainers).forEach((container) => {
+            container.innerHTML =
+              '<div class="test-item"><span>No tests run yet</span></div>';
+          });
+
+          // Hide recommendations
+          document.getElementById("recommendations").style.display = "none";
+
+          this.log("🗑️ Results cleared", "info");
+        }
+
+        setRunning(running) {
+          this.isRunning = running;
+
+          // Disable/enable buttons
+          const buttons = document.querySelectorAll(".btn");
+          buttons.forEach((btn) => {
+            if (btn.id !== "clearResults") {
+              btn.disabled = running;
+            }
+          });
+
+          if (running) {
+            this.progressBar.style.width = "0%";
+          }
+        }
+
+        log(message, type = "info") {
+          const timestamp = new Date().toLocaleTimeString();
+          const logEntry = document.createElement("div");
+          logEntry.className = `log-entry log-${type}`;
+          logEntry.textContent = `[${timestamp}] ${message}`;
+
+          this.logOutput.appendChild(logEntry);
+          this.logOutput.scrollTop = this.logOutput.scrollHeight;
+
+          // Also log to console
+          console.log(`[FinalIntegrationTest] ${message}`);
+        }
+
+        async wait(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+      }
+
+      // Initialize the test runner when the page loads
+      document.addEventListener("DOMContentLoaded", () => {
+        window.finalIntegrationTestRunner = new FinalIntegrationTestRunner();
+      });
+    </script>
+  </body>
+</html>

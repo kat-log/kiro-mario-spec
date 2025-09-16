@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 9: Performance Optimization Test</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background: #1a1a1a;
+        color: #00ff00;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid #00ff00;
+        border-radius: 5px;
+      }
+
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #333;
+        border-radius: 5px;
+      }
+
+      .test-section h3 {
+        color: #ffff00;
+        margin-top: 0;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-weight: bold;
+        margin-left: 10px;
+      }
+
+      .status.pass {
+        background: #004400;
+        color: #00ff00;
+      }
+      .status.fail {
+        background: #440000;
+        color: #ff0000;
+      }
+      .status.warning {
+        background: #444400;
+        color: #ffff00;
+      }
+      .status.info {
+        background: #000044;
+        color: #0088ff;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+      }
+
+      .metric-card {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #444;
+        border-radius: 3px;
+        padding: 10px;
+      }
+
+      .metric-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #00ffff;
+      }
+
+      .controls {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      button {
+        background: #003300;
+        color: #00ff00;
+        border: 1px solid #00ff00;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      button:hover {
+        background: #004400;
+      }
+
+      button:disabled {
+        background: #222;
+        color: #666;
+        cursor: not-allowed;
+      }
+
+      .log {
+        background: #000;
+        border: 1px solid #333;
+        border-radius: 3px;
+        padding: 10px;
+        height: 200px;
+        overflow-y: auto;
+        font-size: 12px;
+        white-space: pre-wrap;
+      }
+
+      .performance-chart {
+        width: 100%;
+        height: 200px;
+        background: #000;
+        border: 1px solid #333;
+        border-radius: 3px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .chart-line {
+        position: absolute;
+        bottom: 0;
+        width: 2px;
+        background: #00ff00;
+        transition: height 0.1s ease;
+      }
+
+      .chart-line.warning {
+        background: #ffff00;
+      }
+      .chart-line.critical {
+        background: #ff0000;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🚀 Task 9: Performance Optimization Test</h1>
+        <p>
+          Testing diagnostic feature overhead measurement, production
+          environment detection, memory monitoring, and frame rate optimization
+        </p>
+      </div>
+
+      <div class="controls">
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="simulateProductionEnvironment()">
+          Simulate Production
+        </button>
+        <button onclick="simulatePerformanceStress()">Stress Test</button>
+        <button onclick="toggleDiagnostics()">Toggle Diagnostics</button>
+        <button onclick="clearResults()">Clear Results</button>
+      </div>
+
+      <div class="test-section">
+        <h3>🔍 Environment Detection</h3>
+        <div id="environment-results">
+          <div class="metric-card">
+            <div>
+              Environment Type:
+              <span id="env-type" class="metric-value">-</span>
+            </div>
+            <div>
+              Diagnostics Enabled:
+              <span id="diagnostics-enabled" class="metric-value">-</span>
+            </div>
+            <div>
+              Production Indicators:
+              <span id="production-indicators" class="metric-value">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Performance Metrics</h3>
+        <div class="metrics" id="performance-metrics">
+          <div class="metric-card">
+            <div>Frame Rate</div>
+            <div class="metric-value" id="frame-rate">- FPS</div>
+          </div>
+          <div class="metric-card">
+            <div>Memory Usage</div>
+            <div class="metric-value" id="memory-usage">- MB</div>
+          </div>
+          <div class="metric-card">
+            <div>Diagnostic Overhead</div>
+            <div class="metric-value" id="diagnostic-overhead">- ms</div>
+          </div>
+          <div class="metric-card">
+            <div>Performance Issues</div>
+            <div class="metric-value" id="performance-issues">-</div>
+          </div>
+        </div>
+
+        <div class="performance-chart" id="performance-chart">
+          <!-- Performance visualization will be added here -->
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧹 Memory Management</h3>
+        <div id="memory-results">
+          <div class="metrics">
+            <div class="metric-card">
+              <div>Jump Diagnostic Memory</div>
+              <div class="metric-value" id="jump-diagnostic-memory">- KB</div>
+            </div>
+            <div class="metric-card">
+              <div>Debug Display Memory</div>
+              <div class="metric-value" id="debug-display-memory">- KB</div>
+            </div>
+            <div class="metric-card">
+              <div>Last Cleanup</div>
+              <div class="metric-value" id="last-cleanup">-</div>
+            </div>
+            <div class="metric-card">
+              <div>Auto Cleanup</div>
+              <div class="metric-value" id="auto-cleanup">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>⚡ Adaptive Optimization</h3>
+        <div id="optimization-results">
+          <div class="metrics">
+            <div class="metric-card">
+              <div>Throttling Status</div>
+              <div class="metric-value" id="throttling-status">-</div>
+            </div>
+            <div class="metric-card">
+              <div>Update Frequency</div>
+              <div class="metric-value" id="update-frequency">- Hz</div>
+            </div>
+            <div class="metric-card">
+              <div>Optimization Level</div>
+              <div class="metric-value" id="optimization-level">-</div>
+            </div>
+            <div class="metric-card">
+              <div>Performance Score</div>
+              <div class="metric-value" id="performance-score">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>📋 Test Results</h3>
+        <div id="test-results"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📝 Performance Log</h3>
+        <div class="log" id="performance-log"></div>
+      </div>
+    </div>
+
+    <!-- Include required JavaScript files -->
+    <script src="js/performance-monitor.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+
+    <script>
+      // Test state
+      let testResults = [];
+      let performanceData = [];
+      let isStressTesting = false;
+      let stressTestInterval = null;
+      let chartUpdateInterval = null;
+
+      // Mock game engine for testing
+      const mockGameEngine = {
+        fps: 60,
+        deltaTime: 16.67,
+        gameState: { mode: "test", isRunning: true },
+        player: {
+          position: { x: 100, y: 200 },
+          velocity: { x: 0, y: 0 },
+          isOnGround: true,
+          lastGroundContact: Date.now(),
+          state: "idle",
+          facing: "right",
+          size: { width: 32, height: 32 },
+          enhancedGroundCheck: () => ({
+            isOnGround: true,
+            confidence: 0.95,
+            details: {
+              physicsGroundCheck: true,
+              positionGroundCheck: true,
+              velocityGroundCheck: true,
+            },
+          }),
+          canJumpEnhanced: () => ({
+            canJump: true,
+            reason: "On ground",
+            blockingFactors: [],
+          }),
+        },
+        inputManager: {
+          getDebugInfo: () => ({
+            pressedKeys: [],
+            activeActions: [],
+            focusState: { hasFocus: true, activeElement: "canvas" },
+            totalKeysTracked: 10,
+            eventSequenceId: 123,
+            eventHistorySize: 50,
+            duplicateEventThreshold: 50,
+            keyBindings: {
+              jump: ["Space", "ArrowUp", "KeyW"],
+              moveLeft: ["ArrowLeft", "KeyA"],
+              moveRight: ["ArrowRight", "KeyD"],
+            },
+            recentEvents: [],
+          }),
+          getPlayerInput: () => ({
+            moveLeft: false,
+            moveRight: false,
+            jump: false,
+            jumpHeld: false,
+            dash: false,
+            block: false,
+          }),
+        },
+        physicsEngine: {
+          getConstants: () => ({
+            gravity: 0.8,
+            terminalVelocity: 15,
+            friction: 0.8,
+            airResistance: 0.02,
+          }),
+        },
+      };
+
+      // Initialize systems
+      let jumpDiagnosticSystem = null;
+      let debugDisplaySystem = null;
+
+      function initializeSystems() {
+        try {
+          jumpDiagnosticSystem = new JumpDiagnosticSystem(
+            mockGameEngine.player,
+            mockGameEngine.inputManager
+          );
+          debugDisplaySystem = new DebugDisplaySystem(mockGameEngine);
+
+          logMessage("✅ Systems initialized successfully");
+          return true;
+        } catch (error) {
+          logMessage(`❌ Failed to initialize systems: ${error.message}`);
+          return false;
+        }
+      }
+
+      function runAllTests() {
+        clearResults();
+        logMessage(
+          "🚀 Starting comprehensive performance optimization tests..."
+        );
+
+        if (!initializeSystems()) {
+          return;
+        }
+
+        // Test 1: Environment Detection
+        testEnvironmentDetection();
+
+        // Test 2: Performance Monitoring
+        testPerformanceMonitoring();
+
+        // Test 3: Memory Management
+        testMemoryManagement();
+
+        // Test 4: Adaptive Optimization
+        testAdaptiveOptimization();
+
+        // Test 5: Diagnostic Overhead
+        testDiagnosticOverhead();
+
+        // Start real-time monitoring
+        startRealTimeMonitoring();
+
+        logMessage("✅ All tests completed");
+        updateTestSummary();
+      }
+
+      function testEnvironmentDetection() {
+        logMessage("🔍 Testing environment detection...");
+
+        const performanceMonitor = window.performanceMonitor;
+        if (!performanceMonitor) {
+          addTestResult(
+            "Environment Detection",
+            "FAIL",
+            "Performance monitor not available"
+          );
+          return;
+        }
+
+        const isProduction = performanceMonitor.isProduction;
+        const diagnosticsEnabled = performanceMonitor.diagnosticsEnabled;
+
+        document.getElementById("env-type").textContent = isProduction
+          ? "Production"
+          : "Development";
+        document.getElementById("diagnostics-enabled").textContent =
+          diagnosticsEnabled ? "Yes" : "No";
+
+        // Test production indicators
+        const indicators = [
+          window.location.hostname !== "localhost",
+          window.location.protocol === "https:",
+          !window.location.search.includes("debug=true"),
+        ];
+
+        document.getElementById("production-indicators").textContent = `${
+          indicators.filter(Boolean).length
+        }/${indicators.length}`;
+
+        const testPassed =
+          typeof isProduction === "boolean" &&
+          typeof diagnosticsEnabled === "boolean";
+        addTestResult(
+          "Environment Detection",
+          testPassed ? "PASS" : "FAIL",
+          `Production: ${isProduction}, Diagnostics: ${diagnosticsEnabled}`
+        );
+
+        logMessage(
+          `Environment: ${
+            isProduction ? "Production" : "Development"
+          }, Diagnostics: ${diagnosticsEnabled}`
+        );
+      }
+
+      function testPerformanceMonitoring() {
+        logMessage("📊 Testing performance monitoring...");
+
+        const performanceMonitor = window.performanceMonitor;
+        if (!performanceMonitor) {
+          addTestResult(
+            "Performance Monitoring",
+            "FAIL",
+            "Performance monitor not available"
+          );
+          return;
+        }
+
+        // Test frame time monitoring
+        let frameTimeTestPassed = false;
+        try {
+          performanceMonitor.recordFrameTime(16.67);
+          performanceMonitor.recordFrameTime(20.0); // Simulate slow frame
+          frameTimeTestPassed =
+            performanceMonitor.performanceMetrics.frameTime.length > 0;
+        } catch (error) {
+          logMessage(`Frame time monitoring error: ${error.message}`);
+        }
+
+        // Test memory monitoring
+        let memoryTestPassed = false;
+        try {
+          if (performance.memory) {
+            const memoryInfo = {
+              used: performance.memory.usedJSHeapSize / 1024 / 1024,
+              total: performance.memory.totalJSHeapSize / 1024 / 1024,
+              limit: performance.memory.jsHeapSizeLimit / 1024 / 1024,
+            };
+            performanceMonitor.recordMemoryUsage(memoryInfo);
+            memoryTestPassed =
+              performanceMonitor.performanceMetrics.memoryUsage.length > 0;
+          }
+        } catch (error) {
+          logMessage(`Memory monitoring error: ${error.message}`);
+        }
+
+        // Test diagnostic overhead measurement
+        let overheadTestPassed = false;
+        try {
+          const testFunction = () => {
+            // Simulate some diagnostic work
+            for (let i = 0; i < 1000; i++) {
+              Math.random();
+            }
+          };
+
+          performanceMonitor.measureDiagnosticOverhead(
+            testFunction,
+            "test-overhead"
+          );
+          overheadTestPassed =
+            performanceMonitor.performanceMetrics.diagnosticOverhead.length > 0;
+        } catch (error) {
+          logMessage(`Overhead monitoring error: ${error.message}`);
+        }
+
+        const allTestsPassed =
+          frameTimeTestPassed &&
+          (memoryTestPassed || !performance.memory) &&
+          overheadTestPassed;
+        addTestResult(
+          "Performance Monitoring",
+          allTestsPassed ? "PASS" : "FAIL",
+          `Frame: ${frameTimeTestPassed}, Memory: ${memoryTestPassed}, Overhead: ${overheadTestPassed}`
+        );
+      }
+
+      function testMemoryManagement() {
+        logMessage("🧹 Testing memory management...");
+
+        let jumpDiagnosticMemoryTest = false;
+        let debugDisplayMemoryTest = false;
+        let cleanupTest = false;
+
+        // Test jump diagnostic memory management
+        if (jumpDiagnosticSystem) {
+          try {
+            // Generate some test data
+            for (let i = 0; i < 50; i++) {
+              jumpDiagnosticSystem.recordJumpAttempt(
+                true,
+                { isOnGround: true },
+                true,
+                "test"
+              );
+            }
+
+            const memoryBefore = jumpDiagnosticSystem.estimateMemoryUsage();
+            jumpDiagnosticSystem.cleanup();
+            const memoryAfter = jumpDiagnosticSystem.estimateMemoryUsage();
+
+            jumpDiagnosticMemoryTest = memoryAfter.bytes <= memoryBefore.bytes;
+
+            document.getElementById(
+              "jump-diagnostic-memory"
+            ).textContent = `${memoryAfter.kb} KB`;
+          } catch (error) {
+            logMessage(`Jump diagnostic memory test error: ${error.message}`);
+          }
+        }
+
+        // Test debug display memory management
+        if (debugDisplaySystem) {
+          try {
+            // Generate some test data
+            for (let i = 0; i < 30; i++) {
+              debugDisplaySystem.update(16.67);
+            }
+
+            const memoryBefore = debugDisplaySystem.estimateMemoryUsage();
+            debugDisplaySystem.cleanup();
+            const memoryAfter = debugDisplaySystem.estimateMemoryUsage();
+
+            debugDisplayMemoryTest = memoryAfter.bytes <= memoryBefore.bytes;
+
+            document.getElementById(
+              "debug-display-memory"
+            ).textContent = `${memoryAfter.kb} KB`;
+          } catch (error) {
+            logMessage(`Debug display memory test error: ${error.message}`);
+          }
+        }
+
+        // Test performance monitor cleanup
+        if (window.performanceMonitor) {
+          try {
+            const beforeCleanup = window.performanceMonitor.getMemoryUsage();
+            window.performanceMonitor.performCleanup();
+            const afterCleanup = window.performanceMonitor.getMemoryUsage();
+
+            cleanupTest = true;
+            document.getElementById("last-cleanup").textContent =
+              new Date().toLocaleTimeString();
+            document.getElementById("auto-cleanup").textContent = "Enabled";
+          } catch (error) {
+            logMessage(
+              `Performance monitor cleanup test error: ${error.message}`
+            );
+          }
+        }
+
+        const allTestsPassed =
+          jumpDiagnosticMemoryTest && debugDisplayMemoryTest && cleanupTest;
+        addTestResult(
+          "Memory Management",
+          allTestsPassed ? "PASS" : "FAIL",
+          `Jump: ${jumpDiagnosticMemoryTest}, Debug: ${debugDisplayMemoryTest}, Cleanup: ${cleanupTest}`
+        );
+      }
+
+      function testAdaptiveOptimization() {
+        logMessage("⚡ Testing adaptive optimization...");
+
+        let throttlingTest = false;
+        let adaptiveTest = false;
+        let optimizationTest = false;
+
+        // Test throttling functionality
+        if (jumpDiagnosticSystem) {
+          try {
+            const initialThrottled =
+              jumpDiagnosticSystem.performanceSettings.throttled;
+            jumpDiagnosticSystem.enableThrottling();
+            const afterThrottling =
+              jumpDiagnosticSystem.performanceSettings.throttled;
+            jumpDiagnosticSystem.disableThrottling();
+            const afterDisabling =
+              jumpDiagnosticSystem.performanceSettings.throttled;
+
+            throttlingTest =
+              !initialThrottled && afterThrottling && !afterDisabling;
+
+            document.getElementById("throttling-status").textContent =
+              jumpDiagnosticSystem.performanceSettings.throttled
+                ? "Enabled"
+                : "Disabled";
+            document.getElementById(
+              "update-frequency"
+            ).textContent = `${jumpDiagnosticSystem.performanceSettings.updateFrequency} Hz`;
+          } catch (error) {
+            logMessage(`Throttling test error: ${error.message}`);
+          }
+        }
+
+        // Test adaptive optimization
+        if (window.performanceMonitor) {
+          try {
+            // Simulate performance issues
+            window.performanceMonitor.handlePerformanceIssue(
+              "frame_time",
+              25,
+              "test"
+            );
+            window.performanceMonitor.handlePerformanceIssue(
+              "memory",
+              150,
+              "test"
+            );
+
+            adaptiveTest = true;
+          } catch (error) {
+            logMessage(`Adaptive optimization test error: ${error.message}`);
+          }
+        }
+
+        // Test optimization level calculation
+        try {
+          const performanceReport = window.performanceMonitor
+            ? window.performanceMonitor.getPerformanceReport()
+            : null;
+
+          if (performanceReport) {
+            const frameRate = performanceReport.frameRate.average;
+            const memoryUsage = performanceReport.memory.current;
+
+            let optimizationLevel = "Normal";
+            if (frameRate < 30 || memoryUsage > 150) {
+              optimizationLevel = "High";
+            } else if (frameRate < 45 || memoryUsage > 100) {
+              optimizationLevel = "Medium";
+            }
+
+            document.getElementById("optimization-level").textContent =
+              optimizationLevel;
+
+            // Calculate performance score
+            const frameScore = Math.min(100, (frameRate / 60) * 100);
+            const memoryScore = Math.max(0, 100 - (memoryUsage / 200) * 100);
+            const performanceScore = Math.round((frameScore + memoryScore) / 2);
+
+            document.getElementById(
+              "performance-score"
+            ).textContent = `${performanceScore}%`;
+
+            optimizationTest = true;
+          }
+        } catch (error) {
+          logMessage(`Optimization level test error: ${error.message}`);
+        }
+
+        const allTestsPassed =
+          throttlingTest && adaptiveTest && optimizationTest;
+        addTestResult(
+          "Adaptive Optimization",
+          allTestsPassed ? "PASS" : "FAIL",
+          `Throttling: ${throttlingTest}, Adaptive: ${adaptiveTest}, Optimization: ${optimizationTest}`
+        );
+      }
+
+      function testDiagnosticOverhead() {
+        logMessage("⏱️ Testing diagnostic overhead measurement...");
+
+        let overheadMeasurementTest = false;
+        let thresholdTest = false;
+        let adaptiveThrottlingTest = false;
+
+        if (window.performanceMonitor) {
+          try {
+            // Test overhead measurement
+            const testFunction = () => {
+              // Simulate diagnostic work with varying overhead
+              const iterations = Math.random() * 10000;
+              for (let i = 0; i < iterations; i++) {
+                Math.sqrt(Math.random());
+              }
+            };
+
+            // Measure multiple times
+            for (let i = 0; i < 10; i++) {
+              window.performanceMonitor.measureDiagnosticOverhead(
+                testFunction,
+                "overhead-test"
+              );
+            }
+
+            overheadMeasurementTest =
+              window.performanceMonitor.performanceMetrics.diagnosticOverhead
+                .length >= 10;
+
+            // Test threshold detection
+            const highOverheadFunction = () => {
+              // Simulate high overhead
+              for (let i = 0; i < 100000; i++) {
+                Math.sqrt(Math.random());
+              }
+            };
+
+            window.performanceMonitor.measureDiagnosticOverhead(
+              highOverheadFunction,
+              "high-overhead-test"
+            );
+
+            const overheadData =
+              window.performanceMonitor.performanceMetrics.diagnosticOverhead;
+            const hasHighOverhead = overheadData.some(
+              (entry) => entry.overhead > 2
+            );
+            thresholdTest = hasHighOverhead;
+
+            // Test adaptive throttling response
+            if (jumpDiagnosticSystem && hasHighOverhead) {
+              const initialThrottled =
+                jumpDiagnosticSystem.performanceSettings.throttled;
+              // Simulate adaptive throttling trigger
+              jumpDiagnosticSystem.enableThrottling();
+              adaptiveThrottlingTest =
+                jumpDiagnosticSystem.performanceSettings.throttled;
+            }
+
+            // Update display
+            const avgOverhead =
+              overheadData.length > 0
+                ? overheadData.reduce((sum, entry) => sum + entry.overhead, 0) /
+                  overheadData.length
+                : 0;
+            document.getElementById(
+              "diagnostic-overhead"
+            ).textContent = `${avgOverhead.toFixed(2)} ms`;
+          } catch (error) {
+            logMessage(`Diagnostic overhead test error: ${error.message}`);
+          }
+        }
+
+        const allTestsPassed = overheadMeasurementTest && thresholdTest;
+        addTestResult(
+          "Diagnostic Overhead",
+          allTestsPassed ? "PASS" : "FAIL",
+          `Measurement: ${overheadMeasurementTest}, Threshold: ${thresholdTest}, Adaptive: ${adaptiveThrottlingTest}`
+        );
+      }
+
+      function simulateProductionEnvironment() {
+        logMessage("🏭 Simulating production environment...");
+
+        // Temporarily modify environment indicators
+        const originalHostname = window.location.hostname;
+        const originalProtocol = window.location.protocol;
+
+        // Create a new performance monitor with production settings
+        try {
+          // Override detection methods for testing
+          if (window.performanceMonitor) {
+            window.performanceMonitor.isProduction = true;
+            window.performanceMonitor.diagnosticsEnabled = false;
+
+            logMessage("✅ Production environment simulated");
+            logMessage("🔒 Diagnostics automatically disabled");
+
+            // Update display
+            document.getElementById("env-type").textContent =
+              "Production (Simulated)";
+            document.getElementById("diagnostics-enabled").textContent = "No";
+
+            // Test that diagnostic systems respect production mode
+            const jumpDiagnosticsEnabled = jumpDiagnosticSystem
+              ? jumpDiagnosticSystem.shouldEnableDiagnostics()
+              : false;
+            const debugDisplayEnabled = debugDisplaySystem
+              ? debugDisplaySystem.shouldEnableDiagnostics()
+              : false;
+
+            addTestResult(
+              "Production Mode",
+              !jumpDiagnosticsEnabled && !debugDisplayEnabled ? "PASS" : "FAIL",
+              `Jump diagnostics: ${jumpDiagnosticsEnabled}, Debug display: ${debugDisplayEnabled}`
+            );
+          }
+        } catch (error) {
+          logMessage(`❌ Production simulation error: ${error.message}`);
+        }
+      }
+
+      function simulatePerformanceStress() {
+        if (isStressTesting) {
+          stopStressTest();
+          return;
+        }
+
+        logMessage("🔥 Starting performance stress test...");
+        isStressTesting = true;
+
+        const button = event.target;
+        button.textContent = "Stop Stress Test";
+
+        // Simulate high CPU load and memory usage
+        stressTestInterval = setInterval(() => {
+          // CPU stress
+          for (let i = 0; i < 50000; i++) {
+            Math.sqrt(Math.random() * Math.random());
+          }
+
+          // Memory stress - create temporary objects
+          const tempData = [];
+          for (let i = 0; i < 1000; i++) {
+            tempData.push({
+              id: i,
+              data: new Array(100).fill(Math.random()),
+              timestamp: Date.now(),
+            });
+          }
+
+          // Simulate diagnostic overhead
+          if (jumpDiagnosticSystem) {
+            jumpDiagnosticSystem.recordJumpAttempt(
+              true,
+              { isOnGround: true },
+              true,
+              "stress-test"
+            );
+          }
+
+          if (debugDisplaySystem) {
+            debugDisplaySystem.update(Math.random() * 50 + 10); // Variable frame time
+          }
+
+          // Update performance metrics
+          updatePerformanceMetrics();
+        }, 50); // High frequency updates
+
+        // Auto-stop after 10 seconds
+        setTimeout(() => {
+          if (isStressTesting) {
+            stopStressTest();
+          }
+        }, 10000);
+      }
+
+      function stopStressTest() {
+        if (stressTestInterval) {
+          clearInterval(stressTestInterval);
+          stressTestInterval = null;
+        }
+
+        isStressTesting = false;
+        const button = document.querySelector(
+          'button[onclick="simulatePerformanceStress()"]'
+        );
+        if (button) {
+          button.textContent = "Stress Test";
+        }
+
+        logMessage("✅ Stress test completed");
+
+        // Force cleanup after stress test
+        if (window.performanceMonitor) {
+          window.performanceMonitor.performCleanup();
+        }
+        if (jumpDiagnosticSystem) {
+          jumpDiagnosticSystem.cleanup();
+        }
+        if (debugDisplaySystem) {
+          debugDisplaySystem.cleanup();
+        }
+      }
+
+      function toggleDiagnostics() {
+        if (window.performanceMonitor) {
+          const currentState = window.performanceMonitor.diagnosticsEnabled;
+          window.performanceMonitor.setDiagnosticsEnabled(!currentState);
+
+          logMessage(
+            `🔄 Diagnostics ${!currentState ? "enabled" : "disabled"}`
+          );
+
+          // Update display
+          document.getElementById("diagnostics-enabled").textContent =
+            !currentState ? "Yes" : "No";
+        }
+      }
+
+      function startRealTimeMonitoring() {
+        // Update performance metrics every second
+        const updateInterval = setInterval(() => {
+          updatePerformanceMetrics();
+          updatePerformanceChart();
+        }, 1000);
+
+        // Update chart more frequently
+        chartUpdateInterval = setInterval(() => {
+          updatePerformanceChart();
+        }, 100);
+
+        // Stop after 5 minutes to prevent memory leaks
+        setTimeout(() => {
+          clearInterval(updateInterval);
+          if (chartUpdateInterval) {
+            clearInterval(chartUpdateInterval);
+          }
+        }, 300000);
+      }
+
+      function updatePerformanceMetrics() {
+        if (window.performanceMonitor) {
+          const report = window.performanceMonitor.getPerformanceReport();
+
+          document.getElementById(
+            "frame-rate"
+          ).textContent = `${report.frameRate.average.toFixed(1)} FPS`;
+          document.getElementById(
+            "memory-usage"
+          ).textContent = `${report.memory.current} MB`;
+          document.getElementById(
+            "diagnostic-overhead"
+          ).textContent = `${report.diagnosticOverhead.average.toFixed(2)} ms`;
+          document.getElementById("performance-issues").textContent =
+            report.frameRate.issues +
+            report.memory.issues +
+            report.diagnosticOverhead.issues;
+
+          // Store data for chart
+          performanceData.push({
+            timestamp: Date.now(),
+            fps: report.frameRate.average,
+            memory: report.memory.current,
+            overhead: report.diagnosticOverhead.average,
+          });
+
+          // Keep only recent data
+          if (performanceData.length > 100) {
+            performanceData.shift();
+          }
+        }
+      }
+
+      function updatePerformanceChart() {
+        const chart = document.getElementById("performance-chart");
+        if (!chart || performanceData.length === 0) return;
+
+        // Clear existing chart
+        chart.innerHTML = "";
+
+        const maxDataPoints = 50;
+        const recentData = performanceData.slice(-maxDataPoints);
+        const chartWidth = chart.offsetWidth;
+        const chartHeight = chart.offsetHeight;
+
+        recentData.forEach((data, index) => {
+          const x = (index / maxDataPoints) * chartWidth;
+          const fpsHeight = (data.fps / 60) * chartHeight * 0.8;
+
+          const line = document.createElement("div");
+          line.className = "chart-line";
+          line.style.left = `${x}px`;
+          line.style.height = `${fpsHeight}px`;
+
+          // Color based on performance
+          if (data.fps < 30) {
+            line.classList.add("critical");
+          } else if (data.fps < 45) {
+            line.classList.add("warning");
+          }
+
+          chart.appendChild(line);
+        });
+      }
+
+      function addTestResult(testName, status, details) {
+        testResults.push({ testName, status, details, timestamp: new Date() });
+        updateTestResults();
+      }
+
+      function updateTestResults() {
+        const resultsContainer = document.getElementById("test-results");
+        resultsContainer.innerHTML = "";
+
+        testResults.forEach((result) => {
+          const resultDiv = document.createElement("div");
+          resultDiv.style.margin = "5px 0";
+          resultDiv.innerHTML = `
+                    <strong>${result.testName}</strong>
+                    <span class="status ${result.status.toLowerCase()}">${
+            result.status
+          }</span>
+                    <br>
+                    <small>${result.details}</small>
+                `;
+          resultsContainer.appendChild(resultDiv);
+        });
+      }
+
+      function updateTestSummary() {
+        const totalTests = testResults.length;
+        const passedTests = testResults.filter(
+          (r) => r.status === "PASS"
+        ).length;
+        const failedTests = testResults.filter(
+          (r) => r.status === "FAIL"
+        ).length;
+
+        logMessage(
+          `📊 Test Summary: ${passedTests}/${totalTests} passed, ${failedTests} failed`
+        );
+
+        if (passedTests === totalTests) {
+          logMessage("🎉 All performance optimization tests passed!");
+        } else {
+          logMessage(
+            "⚠️ Some tests failed. Check the results above for details."
+          );
+        }
+      }
+
+      function logMessage(message) {
+        const log = document.getElementById("performance-log");
+        const timestamp = new Date().toLocaleTimeString();
+        log.textContent += `[${timestamp}] ${message}\n`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function clearResults() {
+        testResults = [];
+        performanceData = [];
+        document.getElementById("test-results").innerHTML = "";
+        document.getElementById("performance-log").textContent = "";
+
+        // Reset metrics displays
+        document.getElementById("frame-rate").textContent = "- FPS";
+        document.getElementById("memory-usage").textContent = "- MB";
+        document.getElementById("diagnostic-overhead").textContent = "- ms";
+        document.getElementById("performance-issues").textContent = "-";
+
+        logMessage("🧹 Results cleared");
+      }
+
+      // Initialize on page load
+      window.addEventListener("load", () => {
+        logMessage("🚀 Performance Optimization Test System initialized");
+        logMessage('Click "Run All Tests" to begin comprehensive testing');
+
+        // Initialize real-time monitoring
+        updatePerformanceMetrics();
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (stressTestInterval) {
+          clearInterval(stressTestInterval);
+        }
+        if (chartUpdateInterval) {
+          clearInterval(chartUpdateInterval);
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -30,6 +30,11 @@ class Player {
     this.state = "idle"; // "idle", "running", "jumping", "dashing", "blocking"
     this.isOnGround = false;
 
+    // Enhanced ground detection properties
+    this.lastGroundContact = 0; // Timestamp of last ground contact
+    this.groundDetectionHistory = []; // History of ground detection states
+    this.groundTolerance = 5; // Ground detection tolerance in pixels
+
     // Movement constants
     this.moveSpeed = 200; // pixels per second
     this.jumpPower = 400; // initial jump velocity
@@ -55,9 +60,21 @@ class Player {
     this.color = "#FF0000"; // Red placeholder color
     this.invincibleFlashTimer = 0;
 
+    // Jump diagnostic system reference
+    this.jumpDiagnosticSystem = null;
+
     console.log(
       `Player created at position (${this.position.x}, ${this.position.y})`
     );
+  }
+
+  /**
+   * Set the jump diagnostic system
+   * @param {JumpDiagnosticSystem} diagnosticSystem - The diagnostic system instance
+   */
+  setJumpDiagnosticSystem(diagnosticSystem) {
+    this.jumpDiagnosticSystem = diagnosticSystem;
+    console.log("[PLAYER] Jump diagnostic system attached");
   }
 
   /**
@@ -136,34 +153,98 @@ class Player {
       }
     }
 
-    // Handle jump input with enhanced logging
+    // Handle jump input with enhanced validation and logging
     if (inputState.jump) {
       const jumpInputTimestamp = performance.now();
+
+      // Pre-input state verification
+      const preInputState = {
+        isOnGround: this.isOnGround,
+        isBlocking: this.isBlocking,
+        state: this.state,
+        position: { ...this.position },
+        velocity: { ...this.velocity },
+        lastGroundContact: this.lastGroundContact,
+        timeSinceGroundContact: jumpInputTimestamp - this.lastGroundContact,
+      };
+
       console.log(
         `[INPUT] Jump input detected at ${jumpInputTimestamp.toFixed(2)}ms`,
         {
           inputState: { ...inputState },
-          playerState: {
-            isOnGround: this.isOnGround,
-            isBlocking: this.isBlocking,
-            state: this.state,
-            position: { ...this.position },
-            velocity: { ...this.velocity },
-          },
+          playerState: preInputState,
         }
       );
 
+      // Perform enhanced jump condition check before attempting jump
+      const jumpValidation = this.canJumpEnhanced();
+
+      console.log(`[INPUT] Pre-jump validation completed`, {
+        canJump: jumpValidation.canJump,
+        reason: jumpValidation.reason,
+        enhancedChecks: jumpValidation.enhancedChecks,
+        blockingFactors: jumpValidation.blockingFactors,
+      });
+
+      // Attempt jump execution
       const jumpResult = this.jump();
+
+      // Record jump attempt in diagnostic system
+      if (this.jumpDiagnosticSystem) {
+        const groundState = this.enhancedGroundCheck();
+        const reason = jumpResult ? "Success" : jumpValidation.reason;
+        this.jumpDiagnosticSystem.recordJumpAttempt(
+          true, // inputDetected
+          groundState,
+          jumpResult, // jumpExecuted
+          reason
+        );
+      }
+
+      // Record jump attempt in debug display system
+      if (this.gameEngine && this.gameEngine.debugDisplaySystem) {
+        this.gameEngine.debugDisplaySystem.recordJumpAttempt({
+          inputDetected: true,
+          jumpExecuted: jumpResult,
+          reason: jumpResult ? "Success" : jumpValidation.reason,
+          validation: jumpValidation,
+          playerState: {
+            position: { ...this.position },
+            velocity: { ...this.velocity },
+            isOnGround: this.isOnGround,
+            state: this.state,
+          },
+        });
+      }
+
+      // Post-input state verification
+      const postInputState = {
+        state: this.state,
+        velocity: { ...this.velocity },
+        isOnGround: this.isOnGround,
+        processingTime: performance.now() - jumpInputTimestamp,
+      };
 
       console.log(`[INPUT] Jump input processed`, {
         jumpExecuted: jumpResult,
-        processingTime: performance.now() - jumpInputTimestamp,
-        resultingState: {
-          state: this.state,
-          velocity: { ...this.velocity },
-          isOnGround: this.isOnGround,
-        },
+        preInputState,
+        postInputState,
+        validationResult: jumpValidation.canJump,
+        stateChanged: preInputState.state !== postInputState.state,
+        velocityChanged: preInputState.velocity.y !== postInputState.velocity.y,
       });
+
+      // Additional diagnostics for failed jumps
+      if (!jumpResult) {
+        console.warn(`[INPUT] Jump execution failed despite input detection`, {
+          inputDetected: true,
+          validationPassed: jumpValidation.canJump,
+          actualExecutionResult: jumpResult,
+          possibleCauses: jumpValidation.blockingFactors,
+          recommendations:
+            this.generateJumpFailureRecommendations(jumpValidation),
+        });
+      }
     }
 
     // Handle dash input
@@ -212,8 +293,8 @@ class Player {
   jump() {
     const timestamp = performance.now();
 
-    // Detailed pre-jump validation with logging
-    const jumpValidation = this.validateJumpConditions();
+    // Enhanced pre-jump validation with lenient conditions
+    const jumpValidation = this.canJumpEnhanced();
 
     console.log(`[JUMP] Jump attempt at ${timestamp.toFixed(2)}ms`, {
       canJump: jumpValidation.canJump,
@@ -229,12 +310,39 @@ class Player {
 
     // Early return with detailed reason if jump is not possible
     if (!jumpValidation.canJump) {
-      console.warn(`[JUMP] Jump blocked: ${jumpValidation.reason}`, {
-        isOnGround: this.isOnGround,
-        isBlocking: this.isBlocking,
-        state: this.state,
-        groundCheckDetails: jumpValidation.groundCheckDetails,
-      });
+      // Enhanced failure logging with detailed diagnostics
+      const failureDetails = {
+        timestamp: timestamp,
+        reason: jumpValidation.reason,
+        blockingFactors: jumpValidation.blockingFactors,
+        playerState: {
+          isOnGround: this.isOnGround,
+          isBlocking: this.isBlocking,
+          state: this.state,
+          position: { ...this.position },
+          velocity: { ...this.velocity },
+        },
+        groundDiagnostics: {
+          enhancedGroundCheck: jumpValidation.groundCheckDetails,
+          timeSinceGroundContact:
+            jumpValidation.enhancedChecks?.timeSinceGroundContact,
+          recentlyOnGround: jumpValidation.enhancedChecks?.recentlyOnGround,
+          groundConfidence: jumpValidation.enhancedChecks?.groundConfidence,
+        },
+        recommendations:
+          this.generateJumpFailureRecommendations(jumpValidation),
+      };
+
+      console.warn(
+        `[JUMP] Jump blocked: ${jumpValidation.reason}`,
+        failureDetails
+      );
+
+      // Trigger jump failure callback if available
+      if (this.onJumpFailure) {
+        this.onJumpFailure(failureDetails);
+      }
+
       return false;
     }
 
@@ -244,29 +352,47 @@ class Player {
       velocity: { ...this.velocity },
       state: this.state,
       isOnGround: this.isOnGround,
+      timestamp: timestamp,
     };
 
-    // Execute jump
+    // Execute jump with enhanced state verification
     const effectiveJumpPower = this.jumpPower * this.jumpBoost;
+
+    // Verify jump execution conditions one more time
+    if (effectiveJumpPower <= 0) {
+      console.error(
+        `[JUMP] Critical error: Invalid jump power ${effectiveJumpPower}`
+      );
+      return false;
+    }
+
+    // Apply jump physics
     this.velocity.y = -effectiveJumpPower;
     this.isOnGround = false;
     this.state = "jumping";
 
-    // Post-jump verification
+    // Post-jump verification and logging
     const postJumpState = {
       position: { ...this.position },
       velocity: { ...this.velocity },
       state: this.state,
       isOnGround: this.isOnGround,
+      timestamp: performance.now(),
     };
 
-    console.log(`[JUMP] Jump executed successfully`, {
+    const jumpExecutionDetails = {
       preJumpState,
       postJumpState,
       effectiveJumpPower,
       velocityChange: this.velocity.y - preJumpState.velocity.y,
-      executionTime: performance.now() - timestamp,
-    });
+      executionTime: postJumpState.timestamp - timestamp,
+      validationUsed: "enhanced",
+      coyoteTimeUsed:
+        jumpValidation.enhancedChecks?.recentlyOnGround &&
+        !preJumpState.isOnGround,
+    };
+
+    console.log(`[JUMP] Jump executed successfully`, jumpExecutionDetails);
 
     // Play jump sound effect
     if (this.audioManager) {
@@ -275,36 +401,107 @@ class Player {
 
     // Trigger jump success callback if available
     if (this.onJumpSuccess) {
-      this.onJumpSuccess({
-        timestamp,
-        preJumpState,
-        postJumpState,
-        effectiveJumpPower,
-      });
+      this.onJumpSuccess(jumpExecutionDetails);
     }
 
     return true;
   }
 
   /**
-   * Validate jump conditions with detailed analysis
-   * @returns {Object} Validation result with detailed information
+   * Generate recommendations for jump failure scenarios
+   * @param {Object} jumpValidation - Jump validation result
+   * @returns {Array} Array of recommendation strings
    */
-  validateJumpConditions() {
+  generateJumpFailureRecommendations(jumpValidation) {
+    const recommendations = [];
+
+    if (jumpValidation.blockingFactors.includes("not_on_ground_enhanced")) {
+      const timeSinceContact =
+        jumpValidation.enhancedChecks?.timeSinceGroundContact || 0;
+      if (timeSinceContact > 100) {
+        recommendations.push(
+          "Player has been off ground too long. Check ground detection system."
+        );
+      } else {
+        recommendations.push(
+          "Ground detection may be inconsistent. Verify collision system."
+        );
+      }
+
+      if (jumpValidation.enhancedChecks?.groundConfidence < 0.5) {
+        recommendations.push(
+          "Low ground detection confidence. Check multiple detection methods."
+        );
+      }
+    }
+
+    if (jumpValidation.blockingFactors.includes("is_blocking")) {
+      recommendations.push(
+        "Player is blocking. Release block input to allow jumping."
+      );
+    }
+
+    if (jumpValidation.blockingFactors.includes("is_dashing")) {
+      recommendations.push(
+        "Player is dashing. Wait for dash to complete before jumping."
+      );
+    }
+
+    if (jumpValidation.blockingFactors.includes("no_jump_power")) {
+      recommendations.push(
+        "Jump power is zero or negative. Check jump power configuration."
+      );
+    }
+
+    if (recommendations.length === 0) {
+      recommendations.push(
+        "Unknown jump failure. Check system state and configuration."
+      );
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Enhanced jump condition validation with lenient ground detection
+   * @returns {Object} Enhanced validation result with detailed information
+   */
+  canJumpEnhanced() {
+    const timestamp = performance.now();
     const validation = {
       canJump: false,
       reason: "",
       groundCheckDetails: {},
       blockingFactors: [],
+      enhancedChecks: {},
+      timestamp: timestamp,
     };
 
-    // Check ground state with enhanced validation
-    const groundCheck = this.performEnhancedGroundCheck();
+    // Perform enhanced ground check
+    const groundCheck = this.enhancedGroundCheck();
     validation.groundCheckDetails = groundCheck;
 
-    if (!this.isOnGround) {
-      validation.blockingFactors.push("not_on_ground");
-      validation.reason = `Player is not on ground (isOnGround: ${this.isOnGround})`;
+    // Calculate time since last ground contact
+    const timeSinceGroundContact = timestamp - this.lastGroundContact;
+    const recentlyOnGround = timeSinceGroundContact <= 100; // 100ms tolerance
+
+    validation.enhancedChecks = {
+      isOnGround: this.isOnGround,
+      enhancedGroundCheck: groundCheck.isOnGround,
+      timeSinceGroundContact: timeSinceGroundContact,
+      recentlyOnGround: recentlyOnGround,
+      groundConfidence: groundCheck.confidence,
+    };
+
+    // Enhanced ground validation - more lenient
+    const canJumpFromGround =
+      this.isOnGround || groundCheck.isOnGround || recentlyOnGround;
+
+    if (!canJumpFromGround) {
+      validation.blockingFactors.push("not_on_ground_enhanced");
+      validation.reason = `Player is not on ground and was not recently on ground (last contact: ${timeSinceGroundContact.toFixed(
+        1
+      )}ms ago, tolerance: 100ms)`;
     }
 
     if (this.isBlocking) {
@@ -332,39 +529,195 @@ class Player {
     validation.canJump = validation.blockingFactors.length === 0;
 
     if (validation.canJump) {
-      validation.reason = "Jump conditions satisfied";
+      validation.reason = "Enhanced jump conditions satisfied";
+      if (recentlyOnGround && !this.isOnGround) {
+        validation.reason += ` (coyote time: ${timeSinceGroundContact.toFixed(
+          1
+        )}ms)`;
+      }
     }
+
+    // Log detailed jump validation information
+    console.log(
+      `[JUMP_VALIDATION] Enhanced jump validation at ${timestamp.toFixed(2)}ms`,
+      {
+        canJump: validation.canJump,
+        reason: validation.reason,
+        blockingFactors: validation.blockingFactors,
+        enhancedChecks: validation.enhancedChecks,
+        groundCheckDetails: validation.groundCheckDetails,
+      }
+    );
 
     return validation;
   }
 
   /**
-   * Perform enhanced ground detection check
+   * Validate jump conditions with detailed analysis (legacy method for compatibility)
+   * @returns {Object} Validation result with detailed information
+   */
+  validateJumpConditions() {
+    // Use the enhanced validation method
+    return this.canJumpEnhanced();
+  }
+
+  /**
+   * Enhanced ground detection check using multiple validation methods
+   * @returns {Object} Comprehensive ground check information
+   */
+  enhancedGroundCheck() {
+    const timestamp = performance.now();
+
+    // 1. Physics-based ground detection (existing collision system)
+    const physicsGroundCheck = this.isOnGround;
+
+    // 2. Position-based ground detection
+    const positionGroundCheck = this.checkGroundByPosition();
+
+    // 3. Velocity-based ground detection
+    const velocityGroundCheck = this.checkGroundByVelocity();
+
+    // Combine all detection methods
+    const combinedResult = physicsGroundCheck || positionGroundCheck;
+
+    // Calculate confidence level
+    const confidence = this.calculateGroundConfidence({
+      physicsGroundCheck,
+      positionGroundCheck,
+      velocityGroundCheck,
+    });
+
+    // Record in history
+    this.recordGroundDetectionHistory({
+      timestamp,
+      physicsGroundCheck,
+      positionGroundCheck,
+      velocityGroundCheck,
+      combinedResult,
+      confidence,
+    });
+
+    // Update last ground contact if on ground
+    if (combinedResult) {
+      this.lastGroundContact = timestamp;
+    }
+
+    const result = {
+      isOnGround: combinedResult,
+      confidence: confidence,
+      timestamp: timestamp,
+      details: {
+        physicsGroundCheck,
+        positionGroundCheck,
+        velocityGroundCheck,
+      },
+      diagnostics: {
+        lastGroundContact: this.lastGroundContact,
+        timeSinceLastContact: timestamp - this.lastGroundContact,
+        historyLength: this.groundDetectionHistory.length,
+      },
+    };
+
+    // Log detailed ground check information
+    console.log(
+      `[GROUND_CHECK] Enhanced ground detection at ${timestamp.toFixed(2)}ms`,
+      result
+    );
+
+    return result;
+  }
+
+  /**
+   * Check ground state based on player position
+   * @returns {boolean} True if player appears to be on ground based on position
+   */
+  checkGroundByPosition() {
+    // Position-based ground detection using multiple heuristics
+    const playerBottom = this.position.y + this.size.height;
+
+    // Heuristic 1: Check if player is at a reasonable ground level
+    // This assumes the game canvas is 600px high and ground is near the bottom
+    const canvasHeight = 600; // Standard game canvas height
+    const groundLevel = canvasHeight - 50; // Assume ground is 50px from bottom
+    const isNearGroundLevel =
+      Math.abs(playerBottom - groundLevel) <= this.groundTolerance;
+
+    // Heuristic 2: Check if player position is stable (not changing rapidly)
+    // This would indicate the player is resting on something
+    const positionStable = this.velocity.y >= -0.1 && this.velocity.y <= 0.1;
+
+    // Heuristic 3: Check if player is not too high up (reasonable jumping height)
+    const maxJumpHeight = 200; // Maximum reasonable jump height
+    const notTooHigh = this.position.y >= canvasHeight - maxJumpHeight;
+
+    // Combine heuristics - player is likely on ground if any strong indicator is true
+    return isNearGroundLevel || (positionStable && notTooHigh);
+  }
+
+  /**
+   * Check ground state based on player velocity
+   * @returns {boolean} True if velocity indicates ground contact
+   */
+  checkGroundByVelocity() {
+    // If player has zero or very small downward velocity, might be on ground
+    const isStationary = Math.abs(this.velocity.y) < 0.1;
+    const isNotFalling = this.velocity.y <= 0.1; // Not falling fast
+
+    // Velocity-based ground detection is most reliable when combined with other methods
+    return isStationary || (isNotFalling && this.velocity.y >= 0);
+  }
+
+  /**
+   * Calculate confidence level for ground detection
+   * @param {Object} checks - Results from different ground check methods
+   * @returns {number} Confidence level between 0 and 1
+   */
+  calculateGroundConfidence(checks) {
+    let confidence = 0;
+    let totalChecks = 0;
+
+    // Physics check has highest weight
+    if (checks.physicsGroundCheck) {
+      confidence += 0.6;
+    }
+    totalChecks += 0.6;
+
+    // Position check has medium weight
+    if (checks.positionGroundCheck) {
+      confidence += 0.3;
+    }
+    totalChecks += 0.3;
+
+    // Velocity check has lower weight
+    if (checks.velocityGroundCheck) {
+      confidence += 0.1;
+    }
+    totalChecks += 0.1;
+
+    // Normalize confidence
+    return totalChecks > 0 ? confidence / totalChecks : 0;
+  }
+
+  /**
+   * Record ground detection history for analysis
+   * @param {Object} detectionData - Ground detection data to record
+   */
+  recordGroundDetectionHistory(detectionData) {
+    this.groundDetectionHistory.push(detectionData);
+
+    // Keep only the last 50 entries to prevent memory issues
+    if (this.groundDetectionHistory.length > 50) {
+      this.groundDetectionHistory.shift();
+    }
+  }
+
+  /**
+   * Perform enhanced ground detection check (legacy method name for compatibility)
    * @returns {Object} Detailed ground check information
    */
   performEnhancedGroundCheck() {
-    const groundCheck = {
-      isOnGround: this.isOnGround,
-      verticalVelocity: this.velocity.y,
-      position: { ...this.position },
-      groundCheckMethod: "physics_engine_collision",
-      additionalChecks: {},
-    };
-
-    // Additional ground validation checks
-    groundCheck.additionalChecks.velocityCheck = {
-      isMovingDown: this.velocity.y > 0,
-      isStationary: Math.abs(this.velocity.y) < 0.1,
-      velocityValue: this.velocity.y,
-    };
-
-    // Position-based ground check (fallback validation)
-    groundCheck.additionalChecks.positionCheck = {
-      nearBottomBound: false,
-      estimatedGroundY: null,
-    };
-
-    return groundCheck;
+    // Delegate to the new enhanced method
+    return this.enhancedGroundCheck();
   }
 
   /**
@@ -665,6 +1018,10 @@ class Player {
     this.isBlocking = false;
     this.invincibleFlashTimer = 0;
 
+    // Reset enhanced ground detection properties
+    this.lastGroundContact = 0;
+    this.groundDetectionHistory = [];
+
     // Reset power-ups
     this.activePowerUps.clear();
     this.speedBoost = 1.0;
@@ -771,6 +1128,29 @@ class Player {
   }
 
   /**
+   * Get ground detection diagnostics
+   * @returns {Object} Ground detection diagnostic information
+   */
+  getGroundDetectionDiagnostics() {
+    const currentTime = performance.now();
+    const recentHistory = this.groundDetectionHistory.slice(-10); // Last 10 entries
+
+    return {
+      lastGroundContact: this.lastGroundContact,
+      timeSinceLastContact: currentTime - this.lastGroundContact,
+      groundTolerance: this.groundTolerance,
+      historyLength: this.groundDetectionHistory.length,
+      recentHistory: recentHistory,
+      currentGroundState: this.isOnGround,
+      averageConfidence:
+        recentHistory.length > 0
+          ? recentHistory.reduce((sum, entry) => sum + entry.confidence, 0) /
+            recentHistory.length
+          : 0,
+    };
+  }
+
+  /**
    * Get current player state (read-only)
    * @returns {Object} - Current player state
    */
@@ -793,6 +1173,10 @@ class Player {
       speedBoost: this.speedBoost,
       jumpBoost: this.jumpBoost,
       strengthBoost: this.strengthBoost,
+      // Enhanced ground detection state
+      lastGroundContact: this.lastGroundContact,
+      groundDetectionHistory: this.groundDetectionHistory.slice(-5), // Last 5 entries
+      groundTolerance: this.groundTolerance,
     };
   }
 }

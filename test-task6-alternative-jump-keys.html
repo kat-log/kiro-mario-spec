@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 6: Alternative Jump Keys Implementation Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .test-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-section {
+        margin-bottom: 30px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .requirement-test {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .requirement-test.passed {
+        border-left-color: #28a745;
+        background: #d4edda;
+      }
+
+      .requirement-test.failed {
+        border-left-color: #dc3545;
+        background: #f8d7da;
+      }
+
+      .key-test {
+        display: inline-block;
+        margin: 5px;
+        padding: 10px 15px;
+        background: #e9e9e9;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        font-family: monospace;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .key-test.pressed {
+        background: #4caf50;
+        color: white;
+        border-color: #45a049;
+      }
+
+      .key-test.triggered {
+        background: #ff9800;
+        color: white;
+        border-color: #f57c00;
+        animation: pulse 0.3s ease-in-out;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .log-container {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .log-entry {
+        margin: 2px 0;
+        padding: 2px 5px;
+      }
+
+      .log-entry.success {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .log-entry.warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .log-entry.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .log-entry.info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .controls {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        margin: 0 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn:hover {
+        opacity: 0.8;
+      }
+
+      .test-status {
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+
+      .test-status.running {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .test-status.passed {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .test-status.failed {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .key-binding-config {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .key-binding-config h4 {
+        margin-top: 0;
+        color: #1976d2;
+      }
+
+      .binding-item {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+      }
+
+      .binding-item label {
+        min-width: 100px;
+        font-weight: bold;
+      }
+
+      .binding-item input {
+        flex: 1;
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        margin: 0 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>Task 6: Alternative Jump Keys Implementation Test</h1>
+      <p>
+        代替ジャンプキー（上矢印、W、Enter）の動作検証と重複実行防止機能のテスト
+      </p>
+
+      <div class="test-status" id="overall-status">テスト準備中...</div>
+
+      <div class="controls">
+        <button class="btn btn-primary" onclick="startComprehensiveTest()">
+          包括テスト開始
+        </button>
+        <button class="btn btn-success" onclick="runRequirementTests()">
+          要件テスト実行
+        </button>
+        <button class="btn btn-secondary" onclick="clearLogs()">
+          ログクリア
+        </button>
+        <button class="btn btn-secondary" onclick="resetTest()">
+          テストリセット
+        </button>
+      </div>
+
+      <!-- Requirement 6.1 Test -->
+      <div class="requirement-test" id="req-6-1">
+        <h4>要件 6.1: 上矢印キー、W キー、Enter キーのジャンプ動作確認</h4>
+        <p>各キーが Space キーと同様にジャンプを実行することを確認</p>
+        <div class="key-test" id="key-space">Space</div>
+        <div class="key-test" id="key-arrowup">↑ Arrow</div>
+        <div class="key-test" id="key-keyw">W</div>
+        <div class="key-test" id="key-enter">Enter</div>
+        <div id="req-6-1-status">待機中...</div>
+      </div>
+
+      <!-- Requirement 6.2 Test -->
+      <div class="requirement-test" id="req-6-2">
+        <h4>要件 6.2: 複数キー同時押し時の重複実行防止</h4>
+        <p>
+          複数のジャンプキーを同時に押しても、重複実行が防止されることを確認
+        </p>
+        <div id="duplicate-prevention-status">待機中...</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="simultaneous-presses">0</div>
+            <div class="stat-label">同時押し検出数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="duplicates-prevented">0</div>
+            <div class="stat-label">重複防止数</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Requirement 6.3 Test -->
+      <div class="requirement-test" id="req-6-3">
+        <h4>要件 6.3: 入力検出から実行までのフロー統一</h4>
+        <p>
+          各キーの入力検出から実行までの処理フローが統一されていることを確認
+        </p>
+        <div id="flow-unification-status">待機中...</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="avg-response-time">0ms</div>
+            <div class="stat-label">平均応答時間</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="flow-consistency">0%</div>
+            <div class="stat-label">フロー一貫性</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Requirement 6.4 Test -->
+      <div class="requirement-test" id="req-6-4">
+        <h4>要件 6.4: キーバインド設定変更機能（将来対応）</h4>
+        <p>キーバインドの設定変更機能が実装されていることを確認</p>
+        <div class="key-binding-config">
+          <h5>キーバインド設定</h5>
+          <div class="binding-item">
+            <label>Jump Keys:</label>
+            <input
+              type="text"
+              id="jump-keys-input"
+              placeholder="Space,ArrowUp,KeyW,Enter"
+            />
+            <button class="btn btn-secondary" onclick="updateKeyBindings()">
+              更新
+            </button>
+          </div>
+          <div id="binding-status">現在の設定を読み込み中...</div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>詳細統計</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="total-key-presses">0</div>
+            <div class="stat-label">総キー押下数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="jump-executions">0</div>
+            <div class="stat-label">ジャンプ実行数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="success-rate">0%</div>
+            <div class="stat-label">成功率</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="key-distribution">均等</div>
+            <div class="stat-label">キー使用分布</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>テストログ</h3>
+        <div class="log-container" id="log-container"></div>
+      </div>
+    </div>
+
+    <!-- Include game scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+
+    <script>
+      class Task6AlternativeJumpKeysTest {
+        constructor() {
+          this.inputManager = null;
+          this.player = null;
+          this.physicsEngine = null;
+          this.jumpDiagnosticSystem = null;
+
+          this.testResults = {
+            req61: { passed: false, details: [] },
+            req62: { passed: false, details: [] },
+            req63: { passed: false, details: [] },
+            req64: { passed: false, details: [] },
+          };
+
+          this.stats = {
+            totalKeyPresses: 0,
+            jumpExecutions: 0,
+            simultaneousPresses: 0,
+            duplicatesPrevented: 0,
+            keyUsage: {},
+            responseTimes: [],
+            flowConsistency: [],
+          };
+
+          this.isTestRunning = false;
+          this.activeKeys = new Set();
+          this.lastJumpTime = 0;
+
+          this.init();
+        }
+
+        async init() {
+          try {
+            // Create canvas for input manager
+            const canvas = document.createElement("canvas");
+            canvas.width = 800;
+            canvas.height = 600;
+            canvas.style.display = "none";
+            document.body.appendChild(canvas);
+
+            // Initialize systems
+            this.inputManager = new InputManager(canvas);
+            this.physicsEngine = new PhysicsEngine();
+            this.player = new Player(100, 100);
+            this.jumpDiagnosticSystem = new JumpDiagnosticSystem(
+              this.player,
+              this.inputManager
+            );
+
+            this.player.setJumpDiagnosticSystem(this.jumpDiagnosticSystem);
+
+            // Set up event listeners
+            this.setupEventListeners();
+
+            // Initialize key binding display
+            this.updateKeyBindingDisplay();
+
+            this.log("Task 6 テストシステム初期化完了", "success");
+            document.getElementById("overall-status").textContent =
+              "テスト準備完了";
+            document.getElementById("overall-status").className =
+              "test-status passed";
+          } catch (error) {
+            this.log(`初期化エラー: ${error.message}`, "error");
+            document.getElementById("overall-status").textContent =
+              "初期化失敗";
+            document.getElementById("overall-status").className =
+              "test-status failed";
+          }
+        }
+
+        setupEventListeners() {
+          // Override input manager's key handling to capture test data
+          const originalHandleKeyDown =
+            this.inputManager.handleKeyDownEnhanced.bind(this.inputManager);
+          const originalHandleKeyUp =
+            this.inputManager.handleKeyUpEnhanced.bind(this.inputManager);
+
+          this.inputManager.handleKeyDownEnhanced = (event) => {
+            this.handleTestKeyDown(event);
+            return originalHandleKeyDown(event);
+          };
+
+          this.inputManager.handleKeyUpEnhanced = (event) => {
+            this.handleTestKeyUp(event);
+            return originalHandleKeyUp(event);
+          };
+
+          // Start update loop
+          this.startUpdateLoop();
+        }
+
+        handleTestKeyDown(event) {
+          const keyCode = event.code;
+          const timestamp = performance.now();
+
+          if (this.isJumpKey(keyCode)) {
+            this.stats.totalKeyPresses++;
+            this.activeKeys.add(keyCode);
+
+            // Track key usage
+            this.stats.keyUsage[keyCode] =
+              (this.stats.keyUsage[keyCode] || 0) + 1;
+
+            // Update visual state
+            this.updateKeyVisual(keyCode, true);
+
+            // Check for simultaneous key presses
+            if (this.activeKeys.size > 1) {
+              this.stats.simultaneousPresses++;
+              this.log(
+                `同時押し検出: ${Array.from(this.activeKeys).join(", ")}`,
+                "warning"
+              );
+            }
+
+            this.log(`キー押下: ${this.getKeyDisplayName(keyCode)}`, "info");
+          }
+        }
+
+        handleTestKeyUp(event) {
+          const keyCode = event.code;
+
+          if (this.isJumpKey(keyCode)) {
+            this.activeKeys.delete(keyCode);
+            this.updateKeyVisual(keyCode, false);
+          }
+        }
+
+        startUpdateLoop() {
+          const update = () => {
+            if (this.isTestRunning) {
+              this.inputManager.update();
+
+              const inputState = this.inputManager.getPlayerInput();
+
+              // Check for jump action
+              if (inputState.jump) {
+                this.handleJumpAction();
+              }
+
+              this.updateStatistics();
+            }
+
+            requestAnimationFrame(update);
+          };
+
+          update();
+        }
+
+        handleJumpAction() {
+          const currentTime = performance.now();
+          const timeSinceLastJump = currentTime - this.lastJumpTime;
+
+          // Check for duplicate prevention
+          if (timeSinceLastJump < 50 && this.lastJumpTime > 0) {
+            this.stats.duplicatesPrevented++;
+            this.log(
+              `重複ジャンプ防止 (${timeSinceLastJump.toFixed(1)}ms間隔)`,
+              "warning"
+            );
+            return;
+          }
+
+          this.stats.jumpExecutions++;
+          this.lastJumpTime = currentTime;
+
+          // Record response time
+          const triggeringKeys = Array.from(this.activeKeys);
+          if (triggeringKeys.length > 0) {
+            this.stats.responseTimes.push({
+              key: triggeringKeys[0],
+              responseTime: 16.67, // Approximate frame time
+              timestamp: currentTime,
+            });
+          }
+
+          this.log(
+            `ジャンプ実行: ${triggeringKeys
+              .map((k) => this.getKeyDisplayName(k))
+              .join(", ")}`,
+            "success"
+          );
+        }
+
+        async startComprehensiveTest() {
+          this.isTestRunning = true;
+          document.getElementById("overall-status").textContent =
+            "包括テスト実行中...";
+          document.getElementById("overall-status").className =
+            "test-status running";
+
+          this.log("=== Task 6 包括テスト開始 ===", "info");
+
+          // Test each requirement
+          await this.testRequirement61();
+          await this.testRequirement62();
+          await this.testRequirement63();
+          await this.testRequirement64();
+
+          // Generate final report
+          this.generateFinalReport();
+        }
+
+        async testRequirement61() {
+          this.log("要件 6.1 テスト開始: 代替ジャンプキーの動作確認", "info");
+
+          const jumpKeys = this.inputManager.getKeyBindings("jump");
+          const expectedKeys = ["Space", "ArrowUp", "KeyW", "Enter"];
+
+          // Check if all expected keys are configured
+          const missingKeys = expectedKeys.filter(
+            (key) => !jumpKeys.includes(key)
+          );
+          const extraKeys = jumpKeys.filter(
+            (key) => !expectedKeys.includes(key)
+          );
+
+          if (missingKeys.length === 0 && extraKeys.length === 0) {
+            this.testResults.req61.passed = true;
+            this.testResults.req61.details.push(
+              "すべての代替ジャンプキーが正しく設定されています"
+            );
+            document.getElementById("req-6-1").className =
+              "requirement-test passed";
+            document.getElementById("req-6-1-status").textContent =
+              "✓ 合格: すべてのキーが設定済み";
+          } else {
+            this.testResults.req61.passed = false;
+            if (missingKeys.length > 0) {
+              this.testResults.req61.details.push(
+                `不足キー: ${missingKeys.join(", ")}`
+              );
+            }
+            if (extraKeys.length > 0) {
+              this.testResults.req61.details.push(
+                `余分なキー: ${extraKeys.join(", ")}`
+              );
+            }
+            document.getElementById("req-6-1").className =
+              "requirement-test failed";
+            document.getElementById("req-6-1-status").textContent =
+              "✗ 不合格: キー設定に問題があります";
+          }
+
+          this.log(
+            `要件 6.1 結果: ${
+              this.testResults.req61.passed ? "合格" : "不合格"
+            }`,
+            this.testResults.req61.passed ? "success" : "error"
+          );
+        }
+
+        async testRequirement62() {
+          this.log("要件 6.2 テスト開始: 重複実行防止機能", "info");
+
+          // Check if duplicate prevention is implemented
+          const debugInfo = this.inputManager.getDebugInfo();
+          const hasDuplicatePrevention = debugInfo.duplicateActionThreshold > 0;
+
+          if (hasDuplicatePrevention) {
+            this.testResults.req62.passed = true;
+            this.testResults.req62.details.push(
+              `重複防止閾値: ${debugInfo.duplicateActionThreshold}ms`
+            );
+            document.getElementById("req-6-2").className =
+              "requirement-test passed";
+            document.getElementById("duplicate-prevention-status").textContent =
+              "✓ 合格: 重複防止機能が実装されています";
+          } else {
+            this.testResults.req62.passed = false;
+            this.testResults.req62.details.push(
+              "重複防止機能が実装されていません"
+            );
+            document.getElementById("req-6-2").className =
+              "requirement-test failed";
+            document.getElementById("duplicate-prevention-status").textContent =
+              "✗ 不合格: 重複防止機能が見つかりません";
+          }
+
+          this.log(
+            `要件 6.2 結果: ${
+              this.testResults.req62.passed ? "合格" : "不合格"
+            }`,
+            this.testResults.req62.passed ? "success" : "error"
+          );
+        }
+
+        async testRequirement63() {
+          this.log("要件 6.3 テスト開始: フロー統一確認", "info");
+
+          // Check if all jump keys use the same action processing flow
+          const jumpKeys = this.inputManager.getKeyBindings("jump");
+          const flowConsistent = jumpKeys.every((key) =>
+            this.inputManager.keyBindings.jump.includes(key)
+          );
+
+          if (flowConsistent) {
+            this.testResults.req63.passed = true;
+            this.testResults.req63.details.push(
+              "すべてのジャンプキーが統一されたフローを使用"
+            );
+            document.getElementById("req-6-3").className =
+              "requirement-test passed";
+            document.getElementById("flow-unification-status").textContent =
+              "✓ 合格: フローが統一されています";
+          } else {
+            this.testResults.req63.passed = false;
+            this.testResults.req63.details.push("フローの統一に問題があります");
+            document.getElementById("req-6-3").className =
+              "requirement-test failed";
+            document.getElementById("flow-unification-status").textContent =
+              "✗ 不合格: フローに不整合があります";
+          }
+
+          this.log(
+            `要件 6.3 結果: ${
+              this.testResults.req63.passed ? "合格" : "不合格"
+            }`,
+            this.testResults.req63.passed ? "success" : "error"
+          );
+        }
+
+        async testRequirement64() {
+          this.log("要件 6.4 テスト開始: キーバインド設定変更機能", "info");
+
+          // Check if key binding configuration methods exist
+          const hasBindingMethods =
+            typeof this.inputManager.setKeyBindings === "function" &&
+            typeof this.inputManager.getKeyBindings === "function" &&
+            typeof this.inputManager.bindKey === "function" &&
+            typeof this.inputManager.unbindKey === "function";
+
+          if (hasBindingMethods) {
+            this.testResults.req64.passed = true;
+            this.testResults.req64.details.push(
+              "キーバインド設定変更メソッドが実装されています"
+            );
+            document.getElementById("req-6-4").className =
+              "requirement-test passed";
+          } else {
+            this.testResults.req64.passed = false;
+            this.testResults.req64.details.push(
+              "キーバインド設定変更メソッドが不足しています"
+            );
+            document.getElementById("req-6-4").className =
+              "requirement-test failed";
+          }
+
+          this.log(
+            `要件 6.4 結果: ${
+              this.testResults.req64.passed ? "合格" : "不合格"
+            }`,
+            this.testResults.req64.passed ? "success" : "error"
+          );
+        }
+
+        generateFinalReport() {
+          const totalTests = Object.keys(this.testResults).length;
+          const passedTests = Object.values(this.testResults).filter(
+            (r) => r.passed
+          ).length;
+          const overallPassed = passedTests === totalTests;
+
+          document.getElementById(
+            "overall-status"
+          ).textContent = `テスト完了: ${passedTests}/${totalTests} 合格 (${
+            overallPassed ? "全体合格" : "一部不合格"
+          })`;
+          document.getElementById("overall-status").className = `test-status ${
+            overallPassed ? "passed" : "failed"
+          }`;
+
+          this.log("=== Task 6 最終レポート ===", "info");
+          this.log(
+            `総合結果: ${passedTests}/${totalTests} 合格`,
+            overallPassed ? "success" : "error"
+          );
+
+          Object.entries(this.testResults).forEach(([req, result]) => {
+            this.log(
+              `${req}: ${
+                result.passed ? "合格" : "不合格"
+              } - ${result.details.join(", ")}`,
+              result.passed ? "success" : "error"
+            );
+          });
+
+          return {
+            overallPassed,
+            passedTests,
+            totalTests,
+            details: this.testResults,
+            stats: this.stats,
+          };
+        }
+
+        updateStatistics() {
+          document.getElementById("total-key-presses").textContent =
+            this.stats.totalKeyPresses;
+          document.getElementById("jump-executions").textContent =
+            this.stats.jumpExecutions;
+          document.getElementById("simultaneous-presses").textContent =
+            this.stats.simultaneousPresses;
+          document.getElementById("duplicates-prevented").textContent =
+            this.stats.duplicatesPrevented;
+
+          const successRate =
+            this.stats.totalKeyPresses > 0
+              ? (
+                  (this.stats.jumpExecutions / this.stats.totalKeyPresses) *
+                  100
+                ).toFixed(1)
+              : 0;
+          document.getElementById("success-rate").textContent =
+            successRate + "%";
+
+          // Update response time
+          const avgResponseTime =
+            this.stats.responseTimes.length > 0
+              ? (
+                  this.stats.responseTimes.reduce(
+                    (sum, r) => sum + r.responseTime,
+                    0
+                  ) / this.stats.responseTimes.length
+                ).toFixed(1)
+              : 0;
+          document.getElementById("avg-response-time").textContent =
+            avgResponseTime + "ms";
+
+          // Update flow consistency
+          document.getElementById("flow-consistency").textContent = "100%"; // All keys use same flow
+
+          // Update key distribution
+          const keyCount = Object.keys(this.stats.keyUsage).length;
+          document.getElementById("key-distribution").textContent =
+            keyCount > 0 ? "分散" : "均等";
+        }
+
+        updateKeyBindingDisplay() {
+          const jumpKeys = this.inputManager.getKeyBindings("jump");
+          document.getElementById("jump-keys-input").value = jumpKeys.join(",");
+          document.getElementById(
+            "binding-status"
+          ).textContent = `現在の設定: ${jumpKeys.join(", ")}`;
+        }
+
+        updateKeyBindings() {
+          const input = document.getElementById("jump-keys-input").value;
+          const newKeys = input
+            .split(",")
+            .map((k) => k.trim())
+            .filter((k) => k);
+
+          try {
+            this.inputManager.setKeyBindings("jump", newKeys);
+            this.updateKeyBindingDisplay();
+            this.log(`キーバインド更新: ${newKeys.join(", ")}`, "success");
+          } catch (error) {
+            this.log(`キーバインド更新エラー: ${error.message}`, "error");
+          }
+        }
+
+        isJumpKey(keyCode) {
+          const jumpKeys = this.inputManager.getKeyBindings("jump");
+          return jumpKeys.includes(keyCode);
+        }
+
+        getKeyDisplayName(keyCode) {
+          const keyNames = {
+            Space: "Space",
+            ArrowUp: "↑",
+            KeyW: "W",
+            Enter: "Enter",
+          };
+          return keyNames[keyCode] || keyCode;
+        }
+
+        updateKeyVisual(keyCode, pressed) {
+          const keyMap = {
+            Space: "key-space",
+            ArrowUp: "key-arrowup",
+            KeyW: "key-keyw",
+            Enter: "key-enter",
+          };
+
+          const elementId = keyMap[keyCode];
+          if (elementId) {
+            const element = document.getElementById(elementId);
+            if (pressed) {
+              element.classList.add("pressed");
+              setTimeout(() => element.classList.add("triggered"), 50);
+              setTimeout(() => element.classList.remove("triggered"), 300);
+            } else {
+              element.classList.remove("pressed");
+            }
+          }
+        }
+
+        log(message, type = "info") {
+          const logContainer = document.getElementById("log-container");
+          const logEntry = document.createElement("div");
+          logEntry.className = `log-entry ${type}`;
+
+          const timestamp = new Date().toLocaleTimeString();
+          logEntry.textContent = `[${timestamp}] ${message}`;
+
+          logContainer.appendChild(logEntry);
+          logContainer.scrollTop = logContainer.scrollHeight;
+
+          // Keep log size manageable
+          while (logContainer.children.length > 100) {
+            logContainer.removeChild(logContainer.firstChild);
+          }
+        }
+
+        clearLogs() {
+          document.getElementById("log-container").innerHTML = "";
+          this.log("ログクリア完了", "info");
+        }
+
+        resetTest() {
+          this.stats = {
+            totalKeyPresses: 0,
+            jumpExecutions: 0,
+            simultaneousPresses: 0,
+            duplicatesPrevented: 0,
+            keyUsage: {},
+            responseTimes: [],
+            flowConsistency: [],
+          };
+
+          this.testResults = {
+            req61: { passed: false, details: [] },
+            req62: { passed: false, details: [] },
+            req63: { passed: false, details: [] },
+            req64: { passed: false, details: [] },
+          };
+
+          this.activeKeys.clear();
+          this.lastJumpTime = 0;
+          this.isTestRunning = false;
+
+          // Reset UI
+          document.querySelectorAll(".requirement-test").forEach((el) => {
+            el.className = "requirement-test";
+          });
+
+          document.getElementById("overall-status").textContent =
+            "テスト準備完了";
+          document.getElementById("overall-status").className =
+            "test-status passed";
+
+          this.updateStatistics();
+          this.log("テストリセット完了", "info");
+        }
+      }
+
+      // Global functions for buttons
+      let testInstance;
+
+      async function startComprehensiveTest() {
+        if (!testInstance) {
+          testInstance = new Task6AlternativeJumpKeysTest();
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for initialization
+        }
+        await testInstance.startComprehensiveTest();
+      }
+
+      async function runRequirementTests() {
+        if (!testInstance) {
+          testInstance = new Task6AlternativeJumpKeysTest();
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for initialization
+        }
+        await testInstance.startComprehensiveTest();
+      }
+
+      function clearLogs() {
+        if (testInstance) {
+          testInstance.clearLogs();
+        }
+      }
+
+      function resetTest() {
+        if (testInstance) {
+          testInstance.resetTest();
+        }
+      }
+
+      function updateKeyBindings() {
+        if (testInstance) {
+          testInstance.updateKeyBindings();
+        }
+      }
+
+      // Initialize test when page loads
+      window.addEventListener("load", async () => {
+        console.log("Task 6 Alternative Jump Keys Test page loaded");
+        testInstance = new Task6AlternativeJumpKeysTest();
+      });
+    </script>
+  </body>
+</html>

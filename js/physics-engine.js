@@ -173,6 +173,26 @@ class PhysicsEngine {
       }
     }
 
+    // Record collision event in debug display system if available
+    if (
+      typeof window !== "undefined" &&
+      window.gameEngine &&
+      window.gameEngine.debugDisplaySystem
+    ) {
+      window.gameEngine.debugDisplaySystem.recordCollisionEvent({
+        entityA: {
+          position: { ...entityA.position },
+          velocity: { ...entityA.velocity },
+          size: { ...entityA.size },
+        },
+        entityB: {
+          position: { ...entityB.position },
+          size: { ...entityB.size },
+        },
+        resolution: { ...resolution },
+      });
+    }
+
     return resolution;
   }
 
@@ -293,5 +313,307 @@ class PhysicsEngine {
     }
 
     console.log("Physics constants updated:", this.getConstants());
+  }
+
+  /**
+   * Enhanced collision resolution with validation and ground contact tracking
+   * @param {Object} entityA - Moving entity (typically the player)
+   * @param {Object} entityB - Static entity (platform, obstacle)
+   * @returns {Object} - Enhanced collision resolution data
+   */
+  resolveCollisionEnhanced(entityA, entityB) {
+    if (!this.isValidEntity(entityA) || !this.isValidEntity(entityB)) {
+      console.warn(
+        "[PHYSICS] Invalid entities passed to resolveCollisionEnhanced",
+        {
+          entityA: !!entityA,
+          entityB: !!entityB,
+          entityAValid: this.isValidEntity(entityA),
+          entityBValid: this.isValidEntity(entityB),
+        }
+      );
+      return { resolved: false, reason: "invalid_entities" };
+    }
+
+    // Store pre-collision state for validation
+    const preCollisionState = {
+      position: { ...entityA.position },
+      velocity: { ...entityA.velocity },
+      isOnGround: entityA.isOnGround,
+    };
+
+    // Perform standard collision resolution
+    const resolution = this.resolveCollision(entityA, entityB);
+
+    if (!resolution.resolved) {
+      return resolution;
+    }
+
+    // Enhanced validation and ground contact tracking for bottom collisions
+    if (resolution.direction === "bottom") {
+      const validationResult = this.validateGroundCollision(
+        entityA,
+        entityB,
+        resolution,
+        preCollisionState
+      );
+
+      if (validationResult.isValid) {
+        // Record ground contact time
+        this.recordGroundContact(entityA);
+
+        // Enhanced resolution data
+        resolution.enhanced = {
+          validated: true,
+          groundContactRecorded: true,
+          validationDetails: validationResult.details,
+          timestamp: performance.now(),
+        };
+
+        console.log("[PHYSICS] Enhanced ground collision resolved", {
+          direction: resolution.direction,
+          overlap: resolution.overlap,
+          entityPosition: entityA.position,
+          platformPosition: entityB.position,
+          validation: validationResult.details,
+        });
+      } else {
+        // Invalid collision detected - report and attempt recovery
+        this.reportInvalidCollision(
+          entityA,
+          entityB,
+          resolution,
+          validationResult
+        );
+
+        // Attempt to recover from invalid collision
+        const recoveryResult = this.attemptCollisionRecovery(
+          entityA,
+          entityB,
+          preCollisionState
+        );
+
+        resolution.enhanced = {
+          validated: false,
+          recovered: recoveryResult.recovered,
+          validationDetails: validationResult.details,
+          recoveryDetails: recoveryResult.details,
+          timestamp: performance.now(),
+        };
+      }
+    } else {
+      // For non-ground collisions, just add basic enhanced data
+      resolution.enhanced = {
+        validated: true,
+        groundContactRecorded: false,
+        validationDetails: { type: "non_ground_collision" },
+        timestamp: performance.now(),
+      };
+    }
+
+    return resolution;
+  }
+
+  /**
+   * Validate ground collision for correctness
+   * @param {Object} entity - The moving entity
+   * @param {Object} platform - The platform entity
+   * @param {Object} resolution - The collision resolution data
+   * @param {Object} preCollisionState - Entity state before collision
+   * @returns {Object} - Validation result
+   */
+  validateGroundCollision(entity, platform, resolution, preCollisionState) {
+    const validationChecks = {
+      velocityCheck: false,
+      overlapCheck: false,
+      positionCheck: false,
+      movementCheck: false,
+    };
+
+    const details = {
+      velocity: { ...entity.velocity },
+      preVelocity: { ...preCollisionState.velocity },
+      overlap: { ...resolution.overlap },
+      entityBottom: entity.position.y + entity.size.height,
+      platformTop: platform.position.y,
+      movementDirection:
+        preCollisionState.velocity.y >= 0 ? "downward" : "upward",
+    };
+
+    // Check 1: Entity should have been moving downward or stationary
+    validationChecks.velocityCheck = preCollisionState.velocity.y >= -10; // Allow small upward velocity for edge cases
+
+    // Check 2: Overlap should be reasonable (not excessive)
+    validationChecks.overlapCheck =
+      resolution.overlap.y > 0 &&
+      resolution.overlap.y <= entity.size.height &&
+      resolution.overlap.y <= platform.size.height;
+
+    // Check 3: Entity bottom should be near platform top after resolution
+    const distanceFromPlatform = Math.abs(
+      entity.position.y + entity.size.height - platform.position.y
+    );
+    validationChecks.positionCheck = distanceFromPlatform <= 2; // Allow 2 pixel tolerance
+
+    // Check 4: Entity should have moved since last frame (unless already on ground)
+    const positionChanged =
+      Math.abs(entity.position.x - preCollisionState.position.x) > 0.1 ||
+      Math.abs(entity.position.y - preCollisionState.position.y) > 0.1;
+    validationChecks.movementCheck =
+      positionChanged || preCollisionState.isOnGround;
+
+    const isValid = Object.values(validationChecks).every((check) => check);
+
+    return {
+      isValid,
+      details: {
+        ...details,
+        checks: validationChecks,
+        overallValid: isValid,
+      },
+    };
+  }
+
+  /**
+   * Record ground contact time for an entity
+   * @param {Object} entity - Entity that made ground contact
+   */
+  recordGroundContact(entity) {
+    if (entity && typeof entity.lastGroundContact !== "undefined") {
+      const currentTime = performance.now();
+      entity.lastGroundContact = currentTime;
+
+      console.log("[PHYSICS] Ground contact recorded", {
+        entityType: entity.constructor.name || "Unknown",
+        timestamp: currentTime,
+        position: { ...entity.position },
+      });
+    }
+  }
+
+  /**
+   * Report invalid collision resolution
+   * @param {Object} entity - The moving entity
+   * @param {Object} platform - The platform entity
+   * @param {Object} resolution - The collision resolution data
+   * @param {Object} validationResult - The validation result
+   */
+  reportInvalidCollision(entity, platform, resolution, validationResult) {
+    console.warn("[PHYSICS] Invalid collision resolution detected", {
+      timestamp: performance.now(),
+      resolution: {
+        direction: resolution.direction,
+        overlap: resolution.overlap,
+      },
+      entity: {
+        position: { ...entity.position },
+        velocity: { ...entity.velocity },
+        size: { ...entity.size },
+      },
+      platform: {
+        position: { ...platform.position },
+        size: { ...platform.size },
+      },
+      validation: validationResult.details,
+      failedChecks: Object.entries(validationResult.details.checks)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key),
+    });
+
+    // Track invalid collision statistics
+    if (!this.invalidCollisionStats) {
+      this.invalidCollisionStats = {
+        total: 0,
+        byType: {},
+        lastReported: 0,
+      };
+    }
+
+    this.invalidCollisionStats.total++;
+    this.invalidCollisionStats.lastReported = performance.now();
+
+    const failedChecks = Object.entries(validationResult.details.checks)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    failedChecks.forEach((checkType) => {
+      this.invalidCollisionStats.byType[checkType] =
+        (this.invalidCollisionStats.byType[checkType] || 0) + 1;
+    });
+  }
+
+  /**
+   * Attempt to recover from invalid collision resolution
+   * @param {Object} entity - The moving entity
+   * @param {Object} platform - The platform entity
+   * @param {Object} preCollisionState - Entity state before collision
+   * @returns {Object} - Recovery result
+   */
+  attemptCollisionRecovery(entity, platform, preCollisionState) {
+    console.log("[PHYSICS] Attempting collision recovery", {
+      entityPosition: { ...entity.position },
+      preCollisionPosition: { ...preCollisionState.position },
+    });
+
+    // Strategy 1: Restore to pre-collision position and stop movement
+    entity.position.x = preCollisionState.position.x;
+    entity.position.y = preCollisionState.position.y;
+    entity.velocity.y = 0;
+
+    // Strategy 2: Try to place entity just above the platform
+    const platformTop = platform.position.y;
+    const entityBottom = entity.position.y + entity.size.height;
+
+    if (entityBottom > platformTop) {
+      entity.position.y = platformTop - entity.size.height;
+      entity.isOnGround = true;
+    }
+
+    // Verify recovery was successful
+    const stillColliding = this.checkAABBCollision(entity, platform);
+    const recovered = !stillColliding;
+
+    console.log("[PHYSICS] Collision recovery result", {
+      recovered,
+      stillColliding,
+      finalPosition: { ...entity.position },
+      finalVelocity: { ...entity.velocity },
+    });
+
+    return {
+      recovered,
+      details: {
+        strategy: "position_restore_and_placement",
+        stillColliding,
+        finalPosition: { ...entity.position },
+        finalVelocity: { ...entity.velocity },
+      },
+    };
+  }
+
+  /**
+   * Get invalid collision statistics
+   * @returns {Object} - Statistics about invalid collisions
+   */
+  getInvalidCollisionStats() {
+    return (
+      this.invalidCollisionStats || {
+        total: 0,
+        byType: {},
+        lastReported: 0,
+      }
+    );
+  }
+
+  /**
+   * Reset invalid collision statistics
+   */
+  resetInvalidCollisionStats() {
+    this.invalidCollisionStats = {
+      total: 0,
+      byType: {},
+      lastReported: 0,
+    };
+    console.log("[PHYSICS] Invalid collision statistics reset");
   }
 }

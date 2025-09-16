@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jump Diagnostic System Test</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background: #1a1a1a;
+        color: #00ff00;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .test-section {
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid #00ff00;
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 5px;
+      }
+
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 3px;
+      }
+
+      .test-pass {
+        background: rgba(0, 255, 0, 0.2);
+        border-left: 4px solid #00ff00;
+      }
+
+      .test-fail {
+        background: rgba(255, 0, 0, 0.2);
+        border-left: 4px solid #ff0000;
+        color: #ff6666;
+      }
+
+      .test-info {
+        background: rgba(0, 150, 255, 0.2);
+        border-left: 4px solid #0096ff;
+        color: #66ccff;
+      }
+
+      button {
+        background: #00ff00;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      button:hover {
+        background: #00cc00;
+      }
+
+      #game-canvas {
+        border: 2px solid #00ff00;
+        background: #000;
+        display: block;
+        margin: 20px auto;
+      }
+
+      .diagnostic-output {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid #333;
+        padding: 10px;
+        margin: 10px 0;
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 12px;
+      }
+
+      .controls {
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      .instructions {
+        background: rgba(255, 255, 0, 0.1);
+        border: 1px solid #ffff00;
+        color: #ffff66;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 Jump Diagnostic System Test</h1>
+
+      <div class="instructions">
+        <h3>📋 Test Instructions:</h3>
+        <ol>
+          <li>
+            <strong>Press F1</strong> to toggle the real-time diagnostic display
+          </li>
+          <li>
+            <strong>Press Space, W, or Up Arrow</strong> to test jump
+            functionality
+          </li>
+          <li>
+            <strong>Click "Run Diagnostic Tests"</strong> to execute automated
+            tests
+          </li>
+          <li>
+            <strong>Click "Generate Report"</strong> to see detailed analysis
+          </li>
+          <li>
+            <strong>Click "Clear Data"</strong> to reset diagnostic history
+          </li>
+        </ol>
+        <p>
+          <em
+            >The diagnostic system will record all jump attempts and provide
+            detailed analysis.</em
+          >
+        </p>
+      </div>
+
+      <div class="controls">
+        <button onclick="runDiagnosticTests()">🧪 Run Diagnostic Tests</button>
+        <button onclick="generateDiagnosticReport()">📊 Generate Report</button>
+        <button onclick="clearDiagnosticData()">🗑️ Clear Data</button>
+        <button onclick="toggleRecording()">⏺️ Toggle Recording</button>
+        <button onclick="exportReport()">💾 Export Report</button>
+      </div>
+
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+
+      <div class="test-section">
+        <h3>🔧 System Status</h3>
+        <div id="system-status"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📈 Test Results</h3>
+        <div id="test-results"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📋 Diagnostic Output</h3>
+        <div id="diagnostic-output" class="diagnostic-output"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Performance Metrics</h3>
+        <div id="performance-metrics"></div>
+      </div>
+    </div>
+
+    <!-- Load all required scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+
+    <script>
+      // Test environment setup
+      let gameEngine = null;
+      let jumpDiagnosticSystem = null;
+      let testResults = [];
+      let isRecording = true;
+
+      // Initialize test environment
+      async function initTestEnvironment() {
+        const canvas = document.getElementById("game-canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Create minimal game environment for testing
+        const inputManager = new InputManager(canvas);
+        const player = new Player(100, 400);
+
+        // Initialize diagnostic system
+        jumpDiagnosticSystem = new JumpDiagnosticSystem(player, inputManager);
+        player.setJumpDiagnosticSystem(jumpDiagnosticSystem);
+
+        // Set up basic game loop for testing
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+          const deltaTime = currentTime - lastTime;
+          lastTime = currentTime;
+
+          // Clear canvas
+          ctx.fillStyle = "#000";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // Update player
+          const inputState = inputManager.getInputState();
+          player.update(deltaTime, inputState);
+
+          // Simple ground detection for testing
+          if (player.position.y + player.size.height >= canvas.height - 50) {
+            player.position.y = canvas.height - 50 - player.size.height;
+            player.velocity.y = 0;
+            player.isOnGround = true;
+            player.lastGroundContact = performance.now();
+          } else {
+            player.isOnGround = false;
+          }
+
+          // Apply simple gravity
+          player.velocity.y += 800 * (deltaTime / 1000);
+          player.position.y += player.velocity.y * (deltaTime / 1000);
+
+          // Render player
+          player.render(ctx);
+
+          // Draw ground
+          ctx.fillStyle = "#00ff00";
+          ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+
+          requestAnimationFrame(gameLoop);
+        }
+
+        requestAnimationFrame(gameLoop);
+
+        updateSystemStatus();
+        logMessage("Test environment initialized successfully");
+      }
+
+      // Update system status display
+      function updateSystemStatus() {
+        const statusDiv = document.getElementById("system-status");
+        const status = jumpDiagnosticSystem ? "Active" : "Not Initialized";
+        const recordingStatus =
+          jumpDiagnosticSystem && jumpDiagnosticSystem.isRecording
+            ? "Recording"
+            : "Paused";
+
+        statusDiv.innerHTML = `
+                <div class="test-result test-${
+                  jumpDiagnosticSystem ? "pass" : "fail"
+                }">
+                    <strong>Diagnostic System:</strong> ${status}
+                </div>
+                <div class="test-result test-${
+                  jumpDiagnosticSystem && jumpDiagnosticSystem.isRecording
+                    ? "pass"
+                    : "info"
+                }">
+                    <strong>Recording Status:</strong> ${recordingStatus}
+                </div>
+                <div class="test-result test-info">
+                    <strong>Jump Attempts Recorded:</strong> ${
+                      jumpDiagnosticSystem
+                        ? jumpDiagnosticSystem.jumpAttempts.length
+                        : 0
+                    }
+                </div>
+                <div class="test-result test-info">
+                    <strong>Display Visible:</strong> ${
+                      jumpDiagnosticSystem
+                        ? jumpDiagnosticSystem.isDisplayVisible
+                        : false
+                    }
+                </div>
+            `;
+      }
+
+      // Run diagnostic tests
+      function runDiagnosticTests() {
+        if (!jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not initialized", "error");
+          return;
+        }
+
+        logMessage("🧪 Running diagnostic tests...", "info");
+        testResults = [];
+
+        // Test 1: System initialization
+        testResults.push({
+          name: "System Initialization",
+          passed: jumpDiagnosticSystem !== null,
+          details: "Jump diagnostic system should be properly initialized",
+        });
+
+        // Test 2: Recording functionality
+        testResults.push({
+          name: "Recording Functionality",
+          passed: typeof jumpDiagnosticSystem.recordJumpAttempt === "function",
+          details: "Should have recordJumpAttempt method",
+        });
+
+        // Test 3: Report generation
+        testResults.push({
+          name: "Report Generation",
+          passed:
+            typeof jumpDiagnosticSystem.generateJumpDiagnosticReport ===
+            "function",
+          details: "Should have generateJumpDiagnosticReport method",
+        });
+
+        // Test 4: Display functionality
+        testResults.push({
+          name: "Display Functionality",
+          passed: jumpDiagnosticSystem.displayElement !== null,
+          details: "Should have display element for real-time information",
+        });
+
+        // Test 5: Data recording
+        const initialCount = jumpDiagnosticSystem.jumpAttempts.length;
+        jumpDiagnosticSystem.recordJumpAttempt(
+          true,
+          { isOnGround: true },
+          true,
+          "Test"
+        );
+        testResults.push({
+          name: "Data Recording",
+          passed: jumpDiagnosticSystem.jumpAttempts.length > initialCount,
+          details: "Should be able to record jump attempts",
+        });
+
+        // Test 6: Analysis functionality
+        const report = jumpDiagnosticSystem.generateJumpDiagnosticReport();
+        testResults.push({
+          name: "Analysis Functionality",
+          passed:
+            report &&
+            typeof report === "object" &&
+            report.totalAttempts !== undefined,
+          details: "Should generate comprehensive diagnostic reports",
+        });
+
+        displayTestResults();
+        updateSystemStatus();
+        logMessage("✅ Diagnostic tests completed", "success");
+      }
+
+      // Display test results
+      function displayTestResults() {
+        const resultsDiv = document.getElementById("test-results");
+        let html = "";
+
+        testResults.forEach((test) => {
+          const statusClass = test.passed ? "test-pass" : "test-fail";
+          const statusIcon = test.passed ? "✅" : "❌";
+          html += `
+                    <div class="test-result ${statusClass}">
+                        <strong>${statusIcon} ${test.name}</strong><br>
+                        <small>${test.details}</small>
+                    </div>
+                `;
+        });
+
+        resultsDiv.innerHTML = html;
+      }
+
+      // Generate diagnostic report
+      function generateDiagnosticReport() {
+        if (!jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not initialized", "error");
+          return;
+        }
+
+        logMessage("📊 Generating diagnostic report...", "info");
+        const report = jumpDiagnosticSystem.generateJumpDiagnosticReport();
+
+        const metricsDiv = document.getElementById("performance-metrics");
+        metricsDiv.innerHTML = `
+                <div class="test-result test-info">
+                    <strong>📈 Performance Summary</strong><br>
+                    Total Attempts: ${report.totalAttempts}<br>
+                    Successful Jumps: ${report.successfulJumps}<br>
+                    Failed Jumps: ${report.failedJumps}<br>
+                    Success Rate: ${report.successRate}%
+                </div>
+                <div class="test-result test-info">
+                    <strong>⚡ Response Times</strong><br>
+                    Average: ${
+                      report.performanceMetrics?.averageResponseTime || "N/A"
+                    }ms<br>
+                    Maximum: ${
+                      report.performanceMetrics?.maxResponseTime || "N/A"
+                    }ms<br>
+                    Frame Drops: ${report.performanceMetrics?.frameDrops || 0}
+                </div>
+                <div class="test-result test-info">
+                    <strong>🔍 Common Issues</strong><br>
+                    ${
+                      report.commonFailureReasons
+                        .map(
+                          (r) => `${r.reason}: ${r.count} (${r.percentage}%)`
+                        )
+                        .join("<br>") || "No failures recorded"
+                    }
+                </div>
+                <div class="test-result test-info">
+                    <strong>💡 Recommendations</strong><br>
+                    ${
+                      report.recommendations
+                        .map((r) => `• ${r.suggestion}`)
+                        .join("<br>") || "No recommendations"
+                    }
+                </div>
+            `;
+
+        logMessage("✅ Diagnostic report generated successfully", "success");
+      }
+
+      // Clear diagnostic data
+      function clearDiagnosticData() {
+        if (!jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not initialized", "error");
+          return;
+        }
+
+        jumpDiagnosticSystem.clearDiagnosticData();
+        updateSystemStatus();
+        logMessage("🗑️ Diagnostic data cleared", "info");
+      }
+
+      // Toggle recording
+      function toggleRecording() {
+        if (!jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not initialized", "error");
+          return;
+        }
+
+        isRecording = !isRecording;
+        jumpDiagnosticSystem.setRecording(isRecording);
+        updateSystemStatus();
+        logMessage(
+          `⏺️ Recording ${isRecording ? "enabled" : "disabled"}`,
+          "info"
+        );
+      }
+
+      // Export report
+      function exportReport() {
+        if (!jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not initialized", "error");
+          return;
+        }
+
+        const exportData = jumpDiagnosticSystem.exportDiagnosticReport();
+        logMessage("💾 Report exported to console and localStorage", "success");
+        console.log("Exported Diagnostic Report:", exportData);
+      }
+
+      // Log message to diagnostic output
+      function logMessage(message, type = "info") {
+        const outputDiv = document.getElementById("diagnostic-output");
+        const timestamp = new Date().toLocaleTimeString();
+        const typeClass =
+          type === "error"
+            ? "test-fail"
+            : type === "success"
+            ? "test-pass"
+            : "test-info";
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `test-result ${typeClass}`;
+        messageDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+
+        outputDiv.appendChild(messageDiv);
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        initTestEnvironment();
+
+        // Update status periodically
+        setInterval(updateSystemStatus, 1000);
+      });
+
+      // Handle keyboard events for testing
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "F1") {
+          event.preventDefault();
+          if (jumpDiagnosticSystem) {
+            jumpDiagnosticSystem.toggleDisplay();
+            logMessage("F1 pressed - Toggled diagnostic display", "info");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 5 Integration Test - Jump Diagnostic System</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background: #1a1a1a;
+        color: #00ff00;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .test-section {
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid #00ff00;
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 5px;
+      }
+
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 3px;
+      }
+
+      .test-pass {
+        background: rgba(0, 255, 0, 0.2);
+        border-left: 4px solid #00ff00;
+      }
+
+      .test-fail {
+        background: rgba(255, 0, 0, 0.2);
+        border-left: 4px solid #ff0000;
+        color: #ff6666;
+      }
+
+      .test-info {
+        background: rgba(0, 150, 255, 0.2);
+        border-left: 4px solid #0096ff;
+        color: #66ccff;
+      }
+
+      button {
+        background: #00ff00;
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      button:hover {
+        background: #00cc00;
+      }
+
+      #game-canvas {
+        border: 2px solid #00ff00;
+        background: #000;
+        display: block;
+        margin: 20px auto;
+      }
+
+      .instructions {
+        background: rgba(255, 255, 0, 0.1);
+        border: 1px solid #ffff00;
+        color: #ffff66;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+
+      .status-display {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid #333;
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔍 Task 5 Integration Test - Jump Diagnostic System</h1>
+
+      <div class="instructions">
+        <h3>📋 Integration Test Instructions:</h3>
+        <ol>
+          <li>
+            <strong>Click "Start Game"</strong> to initialize the full game with
+            diagnostic system
+          </li>
+          <li>
+            <strong>Press F1</strong> to toggle the diagnostic display overlay
+          </li>
+          <li>
+            <strong>Press Space, W, or Up Arrow</strong> to test jump
+            functionality
+          </li>
+          <li>
+            <strong>Click "Run Integration Tests"</strong> to verify all
+            components work together
+          </li>
+          <li>
+            <strong>Watch the real-time diagnostic data</strong> in the overlay
+          </li>
+        </ol>
+        <p>
+          <em
+            >This test verifies that the Jump Diagnostic System integrates
+            correctly with the full game engine.</em
+          >
+        </p>
+      </div>
+
+      <div class="test-section">
+        <h3>🎮 Game Controls</h3>
+        <button onclick="startGame()">🚀 Start Game</button>
+        <button onclick="runIntegrationTests()">
+          🧪 Run Integration Tests
+        </button>
+        <button onclick="generateFullReport()">📊 Generate Full Report</button>
+        <button onclick="resetGame()">🔄 Reset Game</button>
+      </div>
+
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+
+      <div class="test-section">
+        <h3>📈 Integration Test Results</h3>
+        <div id="integration-results"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Real-time Status</h3>
+        <div id="status-display" class="status-display"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📋 Diagnostic Log</h3>
+        <div
+          id="diagnostic-log"
+          class="status-display"
+          style="max-height: 200px; overflow-y: auto"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Load all game scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      let gameEngine = null;
+      let integrationTestResults = [];
+      let statusUpdateInterval = null;
+
+      /**
+       * Start the full game with diagnostic system
+       */
+      async function startGame() {
+        try {
+          const canvas = document.getElementById("game-canvas");
+          gameEngine = new GameEngine(canvas);
+
+          logMessage("🚀 Initializing game engine...");
+          await gameEngine.init();
+
+          logMessage("✅ Game engine initialized successfully");
+          logMessage("🔍 Jump Diagnostic System should be active");
+
+          // Start status updates
+          if (statusUpdateInterval) {
+            clearInterval(statusUpdateInterval);
+          }
+          statusUpdateInterval = setInterval(updateStatus, 1000);
+
+          // Start game loop
+          gameEngine.start();
+
+          logMessage("🎮 Game started - Press F1 to toggle diagnostic display");
+        } catch (error) {
+          logMessage(`❌ Failed to start game: ${error.message}`, "error");
+          console.error("Game initialization error:", error);
+        }
+      }
+
+      /**
+       * Run integration tests
+       */
+      async function runIntegrationTests() {
+        if (!gameEngine) {
+          logMessage(
+            "❌ Game not started. Please start the game first.",
+            "error"
+          );
+          return;
+        }
+
+        logMessage("🧪 Running integration tests...");
+        integrationTestResults = [];
+
+        // Test 1: Game Engine Integration
+        testGameEngineIntegration();
+
+        // Test 2: Player Integration
+        testPlayerIntegration();
+
+        // Test 3: Input Manager Integration
+        testInputManagerIntegration();
+
+        // Test 4: Diagnostic System Functionality
+        testDiagnosticSystemFunctionality();
+
+        // Test 5: Real-time Display Integration
+        testRealTimeDisplayIntegration();
+
+        // Test 6: Data Recording Integration
+        await testDataRecordingIntegration();
+
+        displayIntegrationResults();
+        logMessage("✅ Integration tests completed");
+      }
+
+      /**
+       * Test game engine integration
+       */
+      function testGameEngineIntegration() {
+        const testName = "Game Engine Integration";
+
+        try {
+          const hasGameEngine = gameEngine !== null;
+          const hasDiagnosticSystem = gameEngine.jumpDiagnosticSystem !== null;
+          const hasPlayer = gameEngine.player !== null;
+          const hasInputManager = gameEngine.inputManager !== null;
+
+          const passed =
+            hasGameEngine &&
+            hasDiagnosticSystem &&
+            hasPlayer &&
+            hasInputManager;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              hasGameEngine,
+              hasDiagnosticSystem,
+              hasPlayer,
+              hasInputManager,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Test player integration
+       */
+      function testPlayerIntegration() {
+        const testName = "Player Integration";
+
+        try {
+          const player = gameEngine.player;
+          const hasJumpDiagnosticSystem = player.jumpDiagnosticSystem !== null;
+          const hasSetMethod =
+            typeof player.setJumpDiagnosticSystem === "function";
+          const hasEnhancedGroundCheck =
+            typeof player.enhancedGroundCheck === "function";
+          const hasCanJumpEnhanced =
+            typeof player.canJumpEnhanced === "function";
+
+          const passed =
+            hasJumpDiagnosticSystem &&
+            hasSetMethod &&
+            hasEnhancedGroundCheck &&
+            hasCanJumpEnhanced;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              hasJumpDiagnosticSystem,
+              hasSetMethod,
+              hasEnhancedGroundCheck,
+              hasCanJumpEnhanced,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Test input manager integration
+       */
+      function testInputManagerIntegration() {
+        const testName = "Input Manager Integration";
+
+        try {
+          const inputManager = gameEngine.inputManager;
+          const diagnosticSystem = gameEngine.jumpDiagnosticSystem;
+
+          const hasInputManager = inputManager !== null;
+          const diagnosticHasInputManager =
+            diagnosticSystem.inputManager === inputManager;
+          const hasKeyBindings =
+            inputManager.keyBindings && inputManager.keyBindings.jump;
+
+          const passed =
+            hasInputManager && diagnosticHasInputManager && hasKeyBindings;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              hasInputManager,
+              diagnosticHasInputManager,
+              hasKeyBindings,
+              jumpKeys: inputManager.keyBindings.jump,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Test diagnostic system functionality
+       */
+      function testDiagnosticSystemFunctionality() {
+        const testName = "Diagnostic System Functionality";
+
+        try {
+          const diagnosticSystem = gameEngine.jumpDiagnosticSystem;
+
+          const hasRecordMethod =
+            typeof diagnosticSystem.recordJumpAttempt === "function";
+          const hasReportMethod =
+            typeof diagnosticSystem.generateJumpDiagnosticReport === "function";
+          const hasDisplayMethod =
+            typeof diagnosticSystem.updateRealTimeDisplay === "function";
+          const hasToggleMethod =
+            typeof diagnosticSystem.toggleDisplay === "function";
+          const hasDisplayElement = diagnosticSystem.displayElement !== null;
+
+          const passed =
+            hasRecordMethod &&
+            hasReportMethod &&
+            hasDisplayMethod &&
+            hasToggleMethod &&
+            hasDisplayElement;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              hasRecordMethod,
+              hasReportMethod,
+              hasDisplayMethod,
+              hasToggleMethod,
+              hasDisplayElement,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Test real-time display integration
+       */
+      function testRealTimeDisplayIntegration() {
+        const testName = "Real-time Display Integration";
+
+        try {
+          const diagnosticSystem = gameEngine.jumpDiagnosticSystem;
+
+          // Test display toggle
+          const initialVisibility = diagnosticSystem.isDisplayVisible;
+          diagnosticSystem.toggleDisplay();
+          const afterToggle = diagnosticSystem.isDisplayVisible;
+          diagnosticSystem.toggleDisplay(); // Reset
+
+          // Test display element
+          const displayElement = diagnosticSystem.displayElement;
+          const isInDOM = document.body.contains(displayElement);
+          const hasCorrectStyle = displayElement.style.position === "fixed";
+
+          const passed =
+            initialVisibility !== afterToggle && isInDOM && hasCorrectStyle;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              initialVisibility,
+              afterToggle,
+              isInDOM,
+              hasCorrectStyle,
+              displayElementId: displayElement.id,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Test data recording integration
+       */
+      async function testDataRecordingIntegration() {
+        const testName = "Data Recording Integration";
+
+        try {
+          const diagnosticSystem = gameEngine.jumpDiagnosticSystem;
+          const initialCount = diagnosticSystem.jumpAttempts.length;
+
+          // Simulate a jump attempt
+          const groundState = gameEngine.player.enhancedGroundCheck();
+          diagnosticSystem.recordJumpAttempt(
+            true,
+            groundState,
+            true,
+            "Integration Test"
+          );
+
+          const afterRecord = diagnosticSystem.jumpAttempts.length;
+          const recorded = afterRecord > initialCount;
+
+          // Test report generation
+          const report = diagnosticSystem.generateJumpDiagnosticReport();
+          const hasReport = report && typeof report === "object";
+          const hasBasicFields =
+            hasReport && report.totalAttempts !== undefined;
+
+          const passed = recorded && hasReport && hasBasicFields;
+
+          integrationTestResults.push({
+            name: testName,
+            passed,
+            details: {
+              initialCount,
+              afterRecord,
+              recorded,
+              hasReport,
+              hasBasicFields,
+              reportSample: hasReport
+                ? {
+                    totalAttempts: report.totalAttempts,
+                    successRate: report.successRate,
+                  }
+                : null,
+            },
+          });
+        } catch (error) {
+          integrationTestResults.push({
+            name: testName,
+            passed: false,
+            details: { error: error.message },
+          });
+        }
+      }
+
+      /**
+       * Display integration test results
+       */
+      function displayIntegrationResults() {
+        const resultsDiv = document.getElementById("integration-results");
+        const passedTests = integrationTestResults.filter(
+          (t) => t.passed
+        ).length;
+        const totalTests = integrationTestResults.length;
+        const successRate =
+          totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(1) : 0;
+
+        let html = `
+                <div class="test-result test-info">
+                    <strong>📊 Integration Test Summary</strong><br>
+                    Passed: ${passedTests}/${totalTests} (${successRate}%)<br>
+                    Status: ${
+                      passedTests === totalTests
+                        ? "✅ All tests passed"
+                        : "⚠️ Some tests failed"
+                    }
+                </div>
+            `;
+
+        integrationTestResults.forEach((test) => {
+          const statusClass = test.passed ? "test-pass" : "test-fail";
+          const statusIcon = test.passed ? "✅" : "❌";
+          html += `
+                    <div class="test-result ${statusClass}">
+                        <strong>${statusIcon} ${test.name}</strong><br>
+                        <small>Details: ${JSON.stringify(
+                          test.details,
+                          null,
+                          2
+                        )}</small>
+                    </div>
+                `;
+        });
+
+        resultsDiv.innerHTML = html;
+      }
+
+      /**
+       * Generate full diagnostic report
+       */
+      function generateFullReport() {
+        if (!gameEngine || !gameEngine.jumpDiagnosticSystem) {
+          logMessage("❌ Diagnostic system not available", "error");
+          return;
+        }
+
+        logMessage("📊 Generating full diagnostic report...");
+        const report =
+          gameEngine.jumpDiagnosticSystem.generateJumpDiagnosticReport();
+
+        console.log("Full Diagnostic Report:", report);
+        logMessage("✅ Full report generated (check console for details)");
+
+        // Also export to localStorage
+        gameEngine.jumpDiagnosticSystem.exportDiagnosticReport();
+        logMessage("💾 Report exported to localStorage");
+      }
+
+      /**
+       * Reset game
+       */
+      function resetGame() {
+        if (statusUpdateInterval) {
+          clearInterval(statusUpdateInterval);
+          statusUpdateInterval = null;
+        }
+
+        if (gameEngine) {
+          // Clean up diagnostic system
+          if (gameEngine.jumpDiagnosticSystem) {
+            gameEngine.jumpDiagnosticSystem.destroy();
+          }
+          gameEngine = null;
+        }
+
+        // Clear displays
+        document.getElementById("integration-results").innerHTML = "";
+        document.getElementById("status-display").innerHTML = "";
+        document.getElementById("diagnostic-log").innerHTML = "";
+
+        logMessage("🔄 Game reset completed");
+      }
+
+      /**
+       * Update status display
+       */
+      function updateStatus() {
+        if (!gameEngine || !gameEngine.jumpDiagnosticSystem) return;
+
+        const statusDiv = document.getElementById("status-display");
+        const diagnosticSystem = gameEngine.jumpDiagnosticSystem;
+        const player = gameEngine.player;
+
+        const currentTime = new Date().toLocaleTimeString();
+        const jumpAttempts = diagnosticSystem.jumpAttempts.length;
+        const isRecording = diagnosticSystem.isRecording;
+        const displayVisible = diagnosticSystem.isDisplayVisible;
+
+        statusDiv.innerHTML = `
+                <strong>[${currentTime}] System Status:</strong><br>
+                Jump Attempts Recorded: ${jumpAttempts}<br>
+                Recording Active: ${isRecording ? "✅" : "❌"}<br>
+                Display Visible: ${displayVisible ? "✅" : "❌"}<br>
+                Player Position: (${player.position.x.toFixed(
+                  1
+                )}, ${player.position.y.toFixed(1)})<br>
+                Player On Ground: ${player.isOnGround ? "✅" : "❌"}<br>
+                Player State: ${player.state}
+            `;
+      }
+
+      /**
+       * Log message to diagnostic log
+       */
+      function logMessage(message, type = "info") {
+        const logDiv = document.getElementById("diagnostic-log");
+        const timestamp = new Date().toLocaleTimeString();
+        const typeClass =
+          type === "error"
+            ? "test-fail"
+            : type === "success"
+            ? "test-pass"
+            : "test-info";
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `test-result ${typeClass}`;
+        messageDiv.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+
+        logDiv.appendChild(messageDiv);
+        logDiv.scrollTop = logDiv.scrollHeight;
+      }
+
+      // Handle F1 key for diagnostic display toggle
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "F1") {
+          event.preventDefault();
+          if (gameEngine && gameEngine.jumpDiagnosticSystem) {
+            gameEngine.jumpDiagnosticSystem.toggleDisplay();
+            logMessage("F1 pressed - Toggled diagnostic display");
+          }
+        }
+      });
+
+      // Initialize page
+      window.addEventListener("load", () => {
+        logMessage("🔍 Task 5 Integration Test initialized");
+        logMessage('Click "Start Game" to begin testing');
+      });
+    </script>
+  </body>
+</html>

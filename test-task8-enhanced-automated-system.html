@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 8 Verification - Enhanced Automated Test System</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: 300;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .test-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        border-left: 5px solid #3498db;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 5px;
+        transition: all 0.3s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn.success {
+        background: linear-gradient(135deg, #27ae60, #229954);
+      }
+
+      .btn.warning {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+      }
+
+      .btn.danger {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+      }
+
+      .status {
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+
+      .status.success {
+        background: #d5f4e6;
+        color: #0e6b3a;
+        border-left: 5px solid #27ae60;
+      }
+
+      .status.error {
+        background: #fadbd8;
+        color: #922b21;
+        border-left: 5px solid #e74c3c;
+      }
+
+      .status.info {
+        background: #d6eaf8;
+        color: #1b4f72;
+        border-left: 5px solid #3498db;
+      }
+
+      .log-output {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        margin-top: 20px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 10px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #27ae60);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .metric-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        text-align: center;
+      }
+
+      .metric-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #3498db;
+        display: block;
+      }
+
+      .metric-label {
+        font-size: 0.9em;
+        color: #6c757d;
+        margin-top: 5px;
+      }
+
+      canvas {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: #000;
+        display: block;
+        margin: 20px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧪 Task 8 Verification</h1>
+        <p>Enhanced Automated Test System Implementation</p>
+      </div>
+
+      <div class="content">
+        <div class="test-section">
+          <h3>📋 Requirements Verification</h3>
+          <p>
+            This page verifies the implementation of Task 8:
+            自動テスト機能を実装する
+          </p>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-value" id="requirement81">-</span>
+              <span class="metric-label"
+                >Requirement 8.1<br />Test Suite Creation</span
+              >
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="requirement82">-</span>
+              <span class="metric-label"
+                >Requirement 8.2<br />Various Situations</span
+              >
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="requirement83">-</span>
+              <span class="metric-label"
+                >Requirement 8.3<br />Detailed Reports</span
+              >
+            </div>
+            <div class="metric-card">
+              <span class="metric-value" id="requirement84">-</span>
+              <span class="metric-label">Requirement 8.4<br />Benchmarks</span>
+            </div>
+          </div>
+
+          <div>
+            <button class="btn success" onclick="runVerification()">
+              🔍 Run Verification
+            </button>
+            <button class="btn" onclick="testBasicFunctionality()">
+              🧪 Test Basic Functions
+            </button>
+            <button class="btn" onclick="runBenchmarks()">
+              📊 Run Benchmarks
+            </button>
+            <button class="btn warning" onclick="clearResults()">
+              🗑️ Clear Results
+            </button>
+          </div>
+
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+
+          <div id="statusDisplay"></div>
+        </div>
+
+        <div class="test-section">
+          <h3>🎮 Test Environment</h3>
+          <canvas id="gameCanvas" width="600" height="300"></canvas>
+
+          <div>
+            <button class="btn" onclick="initializeGame()">
+              🎮 Initialize Game
+            </button>
+            <button class="btn" onclick="simulateJump()">
+              🦘 Simulate Jump
+            </button>
+            <button class="btn" onclick="runQuickTest()">⚡ Quick Test</button>
+          </div>
+        </div>
+
+        <div class="log-output" id="logOutput">
+          <div>
+            [SYSTEM] Task 8 verification page loaded. Ready for testing.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Engine Scripts (Mock implementations for testing) -->
+    <script>
+      // Mock GameEngine for testing
+      class MockGameEngine {
+        constructor(canvas, ctx) {
+          this.canvas = canvas;
+          this.ctx = ctx;
+          this.player = {
+            position: { x: 100, y: 250 },
+            velocity: { x: 0, y: 0 },
+            isOnGround: true,
+            isBlocking: false,
+            state: "idle",
+            size: { width: 32, height: 32 },
+          };
+          this.inputManager = {
+            keys: {},
+            actions: {},
+          };
+          this.inputDiagnosticSystem = null;
+        }
+
+        async initialize() {
+          this.render();
+          return Promise.resolve();
+        }
+
+        render() {
+          this.ctx.fillStyle = "#87CEEB";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // Draw ground
+          this.ctx.fillStyle = "#8B4513";
+          this.ctx.fillRect(0, 280, this.canvas.width, 20);
+
+          // Draw player
+          this.ctx.fillStyle = this.player.isOnGround ? "#FF6B6B" : "#4ECDC4";
+          this.ctx.fillRect(
+            this.player.position.x,
+            this.player.position.y,
+            this.player.size.width,
+            this.player.size.height
+          );
+
+          // Draw status
+          this.ctx.fillStyle = "#333";
+          this.ctx.font = "14px Arial";
+          this.ctx.fillText(
+            `Position: (${this.player.position.x}, ${this.player.position.y})`,
+            10,
+            20
+          );
+          this.ctx.fillText(
+            `Velocity: (${this.player.velocity.x.toFixed(
+              1
+            )}, ${this.player.velocity.y.toFixed(1)})`,
+            10,
+            40
+          );
+          this.ctx.fillText(`On Ground: ${this.player.isOnGround}`, 10, 60);
+          this.ctx.fillText(`State: ${this.player.state}`, 10, 80);
+        }
+
+        startGame() {
+          logMessage("Mock game started", "info");
+        }
+
+        stopGame() {
+          logMessage("Mock game stopped", "info");
+        }
+
+        togglePause() {
+          logMessage("Mock game paused/resumed", "info");
+        }
+      }
+
+      // Make GameEngine available globally for the test system
+      window.GameEngine = MockGameEngine;
+    </script>
+
+    <!-- Enhanced Test System -->
+    <script src="js/enhanced-automated-test-system.js"></script>
+    <script src="verify-enhanced-automated-test-system.js"></script>
+
+    <script>
+      let gameEngine = null;
+      let testSystem = null;
+      let verifier = null;
+
+      // Initialize the test environment
+      async function initializeTestEnvironment() {
+        try {
+          const canvas = document.getElementById("gameCanvas");
+          const ctx = canvas.getContext("2d");
+
+          // Initialize mock game engine
+          gameEngine = new MockGameEngine(canvas, ctx);
+          await gameEngine.initialize();
+
+          // Initialize enhanced test system
+          if (typeof EnhancedAutomatedTestSystem !== "undefined") {
+            testSystem = new EnhancedAutomatedTestSystem(gameEngine);
+            logMessage("Enhanced test system initialized", "success");
+          } else {
+            logMessage("Enhanced test system not available", "error");
+          }
+
+          // Initialize verifier
+          if (typeof EnhancedTestSystemVerifier !== "undefined") {
+            verifier = new EnhancedTestSystemVerifier();
+            logMessage("Verification system initialized", "success");
+          } else {
+            logMessage("Verification system not available", "error");
+          }
+
+          showStatus("Test environment initialized", "success");
+        } catch (error) {
+          logMessage(`Initialization failed: ${error.message}`, "error");
+          showStatus("Initialization failed", "error");
+        }
+      }
+
+      // Run full verification
+      async function runVerification() {
+        if (!verifier) {
+          logMessage("Verifier not initialized", "error");
+          return;
+        }
+
+        showStatus("Running verification...", "info");
+        updateProgress(0);
+
+        try {
+          const results = await verifier.runVerification();
+
+          // Update requirement metrics
+          results.requirements.forEach((req) => {
+            const successRate =
+              req.tests.length > 0 ? (req.passed / req.tests.length) * 100 : 0;
+
+            const elementId = `requirement${req.id.replace(".", "")}`;
+            const element = document.getElementById(elementId);
+            if (element) {
+              element.textContent = `${successRate.toFixed(0)}%`;
+              element.style.color =
+                successRate >= 80
+                  ? "#27ae60"
+                  : successRate >= 60
+                  ? "#f39c12"
+                  : "#e74c3c";
+            }
+          });
+
+          updateProgress(100);
+          showStatus(
+            `Verification completed: ${results.summary.successRate.toFixed(
+              1
+            )}% success rate`,
+            results.summary.successRate >= 80 ? "success" : "error"
+          );
+
+          logMessage(
+            `Verification completed with ${results.summary.successRate.toFixed(
+              1
+            )}% success rate`,
+            "success"
+          );
+        } catch (error) {
+          logMessage(`Verification failed: ${error.message}`, "error");
+          showStatus("Verification failed", "error");
+        }
+      }
+
+      // Test basic functionality
+      async function testBasicFunctionality() {
+        if (!testSystem) {
+          logMessage("Test system not initialized", "error");
+          return;
+        }
+
+        showStatus("Testing basic functionality...", "info");
+
+        try {
+          const results = await testSystem.runBasicFunctionalityTests();
+
+          const successRate =
+            (results.summary.passed / results.summary.total) * 100;
+          logMessage(
+            `Basic functionality test: ${successRate.toFixed(
+              1
+            )}% success rate (${results.summary.passed}/${
+              results.summary.total
+            })`,
+            "success"
+          );
+
+          showStatus(
+            `Basic tests completed: ${successRate.toFixed(1)}% success rate`,
+            "success"
+          );
+        } catch (error) {
+          logMessage(
+            `Basic functionality test failed: ${error.message}`,
+            "error"
+          );
+          showStatus("Basic tests failed", "error");
+        }
+      }
+
+      // Run benchmarks
+      async function runBenchmarks() {
+        if (!testSystem) {
+          logMessage("Test system not initialized", "error");
+          return;
+        }
+
+        showStatus("Running benchmarks...", "info");
+
+        try {
+          const results = await testSystem.runBenchmarkSuite();
+
+          logMessage("Benchmark suite completed", "success");
+          logMessage(
+            `Available metrics: ${Object.keys(results.metrics).join(", ")}`,
+            "info"
+          );
+
+          showStatus("Benchmarks completed", "success");
+        } catch (error) {
+          logMessage(`Benchmark suite failed: ${error.message}`, "error");
+          showStatus("Benchmarks failed", "error");
+        }
+      }
+
+      // Initialize game
+      async function initializeGame() {
+        await initializeTestEnvironment();
+      }
+
+      // Simulate jump
+      async function simulateJump() {
+        if (!testSystem) {
+          logMessage("Test system not initialized", "error");
+          return;
+        }
+
+        try {
+          await testSystem.simulateSpaceKeyPress();
+
+          // Update visual feedback
+          if (gameEngine) {
+            gameEngine.player.velocity.y = -10;
+            gameEngine.player.isOnGround = false;
+            gameEngine.player.state = "jumping";
+            gameEngine.render();
+
+            // Simulate landing after a delay
+            setTimeout(() => {
+              gameEngine.player.velocity.y = 0;
+              gameEngine.player.isOnGround = true;
+              gameEngine.player.state = "idle";
+              gameEngine.render();
+            }, 1000);
+          }
+
+          logMessage("Jump simulation completed", "success");
+        } catch (error) {
+          logMessage(`Jump simulation failed: ${error.message}`, "error");
+        }
+      }
+
+      // Run quick test
+      async function runQuickTest() {
+        if (!testSystem) {
+          logMessage("Test system not initialized", "error");
+          return;
+        }
+
+        showStatus("Running quick test...", "info");
+
+        try {
+          // Test space key detection
+          const detected = await testSystem.simulateAndDetectSpaceKey();
+          logMessage(
+            `Space key detection: ${detected ? "SUCCESS" : "FAILED"}`,
+            detected ? "success" : "error"
+          );
+
+          // Test jump execution
+          const initialState = testSystem.capturePlayerState();
+          await testSystem.simulateSpaceKeyPress();
+          const finalState = testSystem.capturePlayerState();
+
+          const jumpExecuted = testSystem.verifyJumpExecution(
+            initialState,
+            finalState
+          );
+          logMessage(
+            `Jump execution: ${jumpExecuted ? "SUCCESS" : "FAILED"}`,
+            jumpExecuted ? "success" : "error"
+          );
+
+          showStatus("Quick test completed", "success");
+        } catch (error) {
+          logMessage(`Quick test failed: ${error.message}`, "error");
+          showStatus("Quick test failed", "error");
+        }
+      }
+
+      // Clear results
+      function clearResults() {
+        document.getElementById("logOutput").innerHTML =
+          "<div>[SYSTEM] Results cleared.</div>";
+
+        // Reset requirement metrics
+        [
+          "requirement81",
+          "requirement82",
+          "requirement83",
+          "requirement84",
+        ].forEach((id) => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.textContent = "-";
+            element.style.color = "#3498db";
+          }
+        });
+
+        updateProgress(0);
+        showStatus("Ready for testing", "info");
+      }
+
+      // Utility functions
+      function logMessage(message, type = "info") {
+        const logOutput = document.getElementById("logOutput");
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement("div");
+
+        const colors = {
+          info: "#3498db",
+          success: "#27ae60",
+          error: "#e74c3c",
+          warning: "#f39c12",
+        };
+
+        logEntry.style.color = colors[type] || colors.info;
+        logEntry.textContent = `[${timestamp}] ${message}`;
+
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+
+        // Keep only last 50 entries
+        while (logOutput.children.length > 50) {
+          logOutput.removeChild(logOutput.firstChild);
+        }
+      }
+
+      function showStatus(message, type = "info") {
+        const statusDisplay = document.getElementById("statusDisplay");
+        statusDisplay.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+
+      function updateProgress(percentage) {
+        const progressFill = document.getElementById("progressFill");
+        progressFill.style.width = `${percentage}%`;
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", async () => {
+        logMessage("Task 8 verification page loaded", "info");
+        await initializeTestEnvironment();
+      });
+    </script>
+  </body>
+</html>

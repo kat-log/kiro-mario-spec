@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comprehensive Automated Test System - Space Key Jump Tests</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 3em;
+        font-weight: 300;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .header p {
+        margin: 15px 0 0 0;
+        opacity: 0.9;
+        font-size: 1.2em;
+      }
+
+      .content {
+        padding: 40px;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+      }
+
+      .game-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        border: 2px solid #e9ecef;
+      }
+
+      .game-canvas-container {
+        border: 3px solid #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #000;
+        margin-bottom: 20px;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 400px;
+      }
+
+      .controls-panel {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        border: 2px solid #e9ecef;
+      }
+
+      .control-group {
+        margin-bottom: 25px;
+      }
+
+      .control-group h3 {
+        margin: 0 0 15px 0;
+        color: #2c3e50;
+        font-size: 1.2em;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 8px;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        padding: 12px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        margin: 5px 5px 5px 0;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn.btn-success {
+        background: linear-gradient(135deg, #27ae60, #229954);
+      }
+
+      .btn.btn-warning {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+      }
+
+      .btn.btn-danger {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+      }
+
+      .btn.btn-info {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+      }
+
+      .btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .status-panel {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 5px solid #3498db;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .status-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #6c757d;
+      }
+
+      .status-dot.running {
+        background: #f39c12;
+        animation: pulse 1.5s infinite;
+      }
+
+      .status-dot.success {
+        background: #27ae60;
+      }
+
+      .status-dot.failed {
+        background: #e74c3c;
+      }
+
+      .progress-container {
+        margin: 15px 0;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 25px;
+        background: #e9ecef;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #27ae60);
+        width: 0%;
+        transition: width 0.5s ease;
+        border-radius: 12px;
+      }
+
+      .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+      }
+
+      .metric-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        text-align: center;
+        transition: transform 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+      }
+
+      .metric-value {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #3498db;
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .metric-label {
+        font-size: 1em;
+        color: #6c757d;
+        font-weight: 500;
+      }
+
+      .test-results {
+        margin-top: 40px;
+      }
+
+      .test-category {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 25px;
+        border-left: 6px solid #3498db;
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-category h3 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .category-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .summary-item {
+        text-align: center;
+      }
+
+      .summary-number {
+        font-size: 1.8em;
+        font-weight: bold;
+        display: block;
+      }
+
+      .summary-number.passed {
+        color: #27ae60;
+      }
+
+      .summary-number.failed {
+        color: #e74c3c;
+      }
+
+      .summary-number.total {
+        color: #3498db;
+      }
+
+      .test-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid #27ae60;
+        transition: all 0.3s ease;
+      }
+
+      .test-item:hover {
+        background: #e9ecef;
+        transform: translateX(5px);
+      }
+
+      .test-item.failed {
+        border-left-color: #e74c3c;
+      }
+
+      .test-item.error {
+        border-left-color: #f39c12;
+      }
+
+      .test-item h4 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .test-status-icon {
+        font-size: 1.5em;
+      }
+
+      .test-duration {
+        font-size: 0.9em;
+        color: #6c757d;
+        background: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .test-details {
+        font-size: 0.95em;
+        color: #6c757d;
+        margin-top: 15px;
+        padding: 15px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+      }
+
+      .log-output {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 25px;
+        border-radius: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        max-height: 500px;
+        overflow-y: auto;
+        margin-top: 30px;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .log-entry {
+        margin-bottom: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+
+      .log-entry.info {
+        color: #3498db;
+      }
+
+      .log-entry.success {
+        color: #27ae60;
+      }
+
+      .log-entry.warning {
+        color: #f39c12;
+      }
+
+      .log-entry.error {
+        color: #e74c3c;
+      }
+
+      .alert {
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-left: 5px solid;
+      }
+
+      .alert.info {
+        background: #d6eaf8;
+        border-left-color: #3498db;
+        color: #1b4f72;
+      }
+
+      .alert.success {
+        background: #d5f4e6;
+        border-left-color: #27ae60;
+        color: #0e6b3a;
+      }
+
+      .alert.warning {
+        background: #fdeaa7;
+        border-left-color: #f39c12;
+        color: #7d6608;
+      }
+
+      .alert.error {
+        background: #fadbd8;
+        border-left-color: #e74c3c;
+        color: #922b21;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.7;
+          transform: scale(1.1);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .benchmark-section {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px;
+        padding: 30px;
+        margin: 30px 0;
+        border: 2px solid #dee2e6;
+      }
+
+      .benchmark-chart {
+        height: 300px;
+        background: white;
+        border-radius: 8px;
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+      }
+
+      .regression-alert {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        padding: 25px;
+        border-radius: 12px;
+        margin: 20px 0;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+      }
+
+      .regression-alert h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.5em;
+      }
+
+      .floating-controls {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1000;
+      }
+
+      .floating-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: none;
+        color: white;
+        font-size: 1.5em;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .floating-btn:hover {
+        transform: scale(1.1);
+      }
+
+      .floating-btn.play {
+        background: linear-gradient(135deg, #27ae60, #229954);
+      }
+
+      .floating-btn.stop {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+      }
+
+      .floating-btn.report {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧪 Comprehensive Automated Test System</h1>
+        <p>
+          Advanced Space Key Jump Functionality Testing & Benchmarking Suite
+        </p>
+      </div>
+
+      <div class="content">
+        <div class="alert info">
+          <strong>🎯 テストシステム概要:</strong>
+          この強化されたテストシステムは、スペースキーのジャンプ機能を包括的にテストし、
+          詳細なレポート生成、ベンチマーク測定、回帰テストを実行します。
+          リアルタイムでのパフォーマンス監視と詳細な分析機能を提供します。
+        </div>
+
+        <div class="dashboard">
+          <div class="game-section">
+            <h3>🎮 Game Environment</h3>
+            <div class="game-canvas-container">
+              <canvas id="gameCanvas" width="800" height="400"></canvas>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <span class="metric-value" id="fpsMetric">60</span>
+                <span class="metric-label">FPS</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="latencyMetric">0</span>
+                <span class="metric-label">Latency (ms)</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-value" id="memoryMetric">0</span>
+                <span class="metric-label">Memory (MB)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls-panel">
+            <div class="status-panel">
+              <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Initializing...</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill"></div>
+                  <div class="progress-text" id="progressText">0%</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <h3>🎮 Game Controls</h3>
+              <button class="btn btn-success" onclick="startGame()">
+                Start Game
+              </button>
+              <button class="btn btn-warning" onclick="pauseGame()">
+                Pause
+              </button>
+              <button class="btn btn-danger" onclick="stopGame()">Stop</button>
+            </div>
+
+            <div class="control-group">
+              <h3>🧪 Test Suites</h3>
+              <button class="btn" onclick="runBasicTests()">Basic Tests</button>
+              <button class="btn" onclick="runPerformanceTests()">
+                Performance
+              </button>
+              <button class="btn" onclick="runStressTests()">
+                Stress Tests
+              </button>
+              <button class="btn btn-success" onclick="runFullTestSuite()">
+                Full Suite
+              </button>
+            </div>
+
+            <div class="control-group">
+              <h3>📊 Benchmarks</h3>
+              <button class="btn btn-info" onclick="runBenchmarks()">
+                Run Benchmarks
+              </button>
+              <button class="btn btn-info" onclick="runRegressionTests()">
+                Regression Tests
+              </button>
+              <button class="btn btn-warning" onclick="generateReport()">
+                Generate Report
+              </button>
+            </div>
+
+            <div class="control-group">
+              <h3>🔧 Utilities</h3>
+              <button class="btn" onclick="simulateSpaceKey()">
+                Simulate Space
+              </button>
+              <button class="btn" onclick="clearResults()">
+                Clear Results
+              </button>
+              <button class="btn" onclick="exportData()">Export Data</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="test-results" id="testResults">
+          <!-- Test results will be populated here -->
+        </div>
+
+        <div
+          class="benchmark-section"
+          id="benchmarkSection"
+          style="display: none"
+        >
+          <h3>📊 Benchmark Results</h3>
+          <div class="benchmark-chart" id="benchmarkChart">
+            <!-- Benchmark visualization will be rendered here -->
+          </div>
+        </div>
+
+        <div class="log-output" id="logOutput">
+          <div class="log-entry info">
+            [SYSTEM] Enhanced Automated Test System initialized. Ready for
+            comprehensive testing.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="floating-controls">
+      <button
+        class="floating-btn play"
+        onclick="runFullTestSuite()"
+        title="Run Full Test Suite"
+      >
+        ▶
+      </button>
+      <button
+        class="floating-btn stop"
+        onclick="stopAllTests()"
+        title="Stop All Tests"
+      >
+        ⏹
+      </button>
+      <button
+        class="floating-btn report"
+        onclick="generateReport()"
+        title="Generate Report"
+      >
+        📊
+      </button>
+    </div>
+
+    <!-- Game Engine Scripts -->
+    <script src="js/physics-engine.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/main.js"></script>
+
+    <!-- Enhanced Input Systems -->
+    <script src="js/input-diagnostic-system.js"></script>
+    <script src="js/focus-manager.js"></script>
+    <script src="js/enhanced-input-manager.js"></script>
+    <script src="js/compatibility-layer.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+
+    <!-- Test Systems -->
+    <script src="js/test-runner.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/automated-test-system.js"></script>
+    <script src="js/enhanced-automated-test-system.js"></script>
+
+    <script>
+      let gameEngine = null;
+      let enhancedTestSystem = null;
+      let currentTestRun = null;
+      let performanceMonitor = null;
+
+      // Initialize the enhanced test system
+      async function initializeSystem() {
+        try {
+          updateStatus("Initializing system...", "running");
+          logMessage("Starting enhanced test system initialization", "info");
+
+          const canvas = document.getElementById("gameCanvas");
+          const ctx = canvas.getContext("2d");
+
+          // Initialize game engine
+          gameEngine = new GameEngine(canvas, ctx);
+          await gameEngine.initialize();
+
+          // Initialize enhanced test system
+          enhancedTestSystem = new EnhancedAutomatedTestSystem(gameEngine);
+
+          // Start performance monitoring
+          startPerformanceMonitoring();
+
+          logMessage(
+            "Enhanced test system initialized successfully",
+            "success"
+          );
+          updateStatus("Ready for testing", "success");
+        } catch (error) {
+          logMessage(`Initialization failed: ${error.message}`, "error");
+          updateStatus("Initialization failed", "failed");
+          console.error("System initialization error:", error);
+        }
+      }
+
+      // Performance monitoring
+      function startPerformanceMonitoring() {
+        performanceMonitor = {
+          startTime: performance.now(),
+          frameCount: 0,
+          lastFrameTime: performance.now(),
+        };
+
+        setInterval(() => {
+          updatePerformanceMetrics();
+        }, 1000);
+      }
+
+      function updatePerformanceMetrics() {
+        // FPS calculation
+        const now = performance.now();
+        const deltaTime = now - performanceMonitor.lastFrameTime;
+        const fps = Math.round(1000 / deltaTime);
+        document.getElementById("fpsMetric").textContent = fps;
+        performanceMonitor.lastFrameTime = now;
+
+        // Memory usage (if available)
+        if (performance.memory) {
+          const memoryMB = Math.round(
+            performance.memory.usedJSHeapSize / 1024 / 1024
+          );
+          document.getElementById("memoryMetric").textContent = memoryMB;
+        }
+
+        // Update latency metric if available
+        if (
+          enhancedTestSystem &&
+          enhancedTestSystem.performanceMonitor.latencyMeasurements.length > 0
+        ) {
+          const latencies =
+            enhancedTestSystem.performanceMonitor.latencyMeasurements;
+          const avgLatency =
+            latencies.reduce((a, b) => a + b, 0) / latencies.length;
+          document.getElementById("latencyMetric").textContent =
+            Math.round(avgLatency);
+        }
+      }
+
+      // Game control functions
+      function startGame() {
+        if (gameEngine) {
+          gameEngine.startGame();
+          logMessage("Game started", "info");
+          updateStatus("Game running", "success");
+        }
+      }
+
+      function pauseGame() {
+        if (gameEngine) {
+          gameEngine.togglePause();
+          logMessage("Game paused/resumed", "info");
+        }
+      }
+
+      function stopGame() {
+        if (gameEngine) {
+          gameEngine.stopGame();
+          logMessage("Game stopped", "info");
+          updateStatus("Game stopped", "success");
+        }
+      }
+
+      // Test execution functions
+      async function runBasicTests() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running basic tests...", "running");
+        logMessage("Starting basic functionality tests", "info");
+
+        try {
+          const results = await enhancedTestSystem.runBasicFunctionalityTests();
+          displayTestCategory("Basic Functionality Tests", results);
+
+          const successRate =
+            (results.summary.passed / results.summary.total) * 100;
+          logMessage(
+            `Basic tests completed: ${successRate.toFixed(1)}% success rate`,
+            "success"
+          );
+          updateStatus("Basic tests completed", "success");
+        } catch (error) {
+          logMessage(`Basic tests failed: ${error.message}`, "error");
+          updateStatus("Basic tests failed", "failed");
+        }
+      }
+
+      async function runPerformanceTests() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running performance tests...", "running");
+        logMessage("Starting performance tests", "info");
+
+        try {
+          const results = await enhancedTestSystem.runPerformanceTests();
+          displayTestCategory("Performance Tests", results);
+
+          logMessage("Performance tests completed", "success");
+          updateStatus("Performance tests completed", "success");
+        } catch (error) {
+          logMessage(`Performance tests failed: ${error.message}`, "error");
+          updateStatus("Performance tests failed", "failed");
+        }
+      }
+
+      async function runStressTests() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running stress tests...", "running");
+        logMessage("Starting stress tests", "info");
+
+        try {
+          const results = await enhancedTestSystem.runStressTests();
+          displayTestCategory("Stress Tests", results);
+
+          logMessage("Stress tests completed", "success");
+          updateStatus("Stress tests completed", "success");
+        } catch (error) {
+          logMessage(`Stress tests failed: ${error.message}`, "error");
+          updateStatus("Stress tests failed", "failed");
+        }
+      }
+
+      async function runFullTestSuite() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running full test suite...", "running");
+        logMessage("Starting comprehensive test suite", "info");
+
+        try {
+          const results = await enhancedTestSystem.runFullTestSuite(
+            (progress) => {
+              updateProgress(progress);
+            }
+          );
+
+          displayFullTestResults(results);
+
+          const successRate = results.summary.successRate;
+          logMessage(
+            `Full test suite completed: ${successRate.toFixed(
+              1
+            )}% success rate`,
+            "success"
+          );
+          updateStatus("Full test suite completed", "success");
+
+          // Check for regressions
+          if (results.testCategories.some((cat) => cat.regressionDetected)) {
+            showRegressionAlert();
+          }
+        } catch (error) {
+          logMessage(`Full test suite failed: ${error.message}`, "error");
+          updateStatus("Full test suite failed", "failed");
+        }
+      }
+
+      async function runBenchmarks() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running benchmarks...", "running");
+        logMessage("Starting benchmark suite", "info");
+
+        try {
+          const results = await enhancedTestSystem.runBenchmarks();
+          displayBenchmarkResults(results);
+
+          logMessage("Benchmark suite completed", "success");
+          updateStatus("Benchmarks completed", "success");
+        } catch (error) {
+          logMessage(`Benchmark suite failed: ${error.message}`, "error");
+          updateStatus("Benchmarks failed", "failed");
+        }
+      }
+
+      async function runRegressionTests() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        updateStatus("Running regression tests...", "running");
+        logMessage("Starting regression test suite", "info");
+
+        try {
+          const results = await enhancedTestSystem.runRegressionTests();
+          displayTestCategory("Regression Tests", results);
+
+          if (results.regressionDetected) {
+            logMessage("⚠️ Regression detected!", "warning");
+            showRegressionAlert();
+          } else {
+            logMessage("✅ No regression detected", "success");
+          }
+
+          updateStatus("Regression tests completed", "success");
+        } catch (error) {
+          logMessage(`Regression tests failed: ${error.message}`, "error");
+          updateStatus("Regression tests failed", "failed");
+        }
+      }
+
+      // Utility functions
+      async function simulateSpaceKey() {
+        if (!enhancedTestSystem) {
+          logMessage("Enhanced test system not initialized", "error");
+          return;
+        }
+
+        logMessage("Simulating space key press...", "info");
+
+        try {
+          await enhancedTestSystem.simulateSpaceKeyPress();
+          logMessage("Space key simulation completed", "success");
+        } catch (error) {
+          logMessage(`Simulation error: ${error.message}`, "error");
+        }
+      }
+
+      function clearResults() {
+        if (enhancedTestSystem) {
+          enhancedTestSystem.clearTestData();
+        }
+
+        document.getElementById("testResults").innerHTML = "";
+        document.getElementById("benchmarkSection").style.display = "none";
+
+        logMessage("Test results cleared", "info");
+      }
+
+      function exportData() {
+        if (!enhancedTestSystem) {
+          logMessage("No test data to export", "warning");
+          return;
+        }
+
+        try {
+          const data = {
+            testResults: enhancedTestSystem.getTestHistory(),
+            benchmarks: enhancedTestSystem.getBenchmarkData(),
+            timestamp: Date.now(),
+          };
+
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `jump-test-data-${new Date()
+            .toISOString()
+            .slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          logMessage("Test data exported successfully", "success");
+        } catch (error) {
+          logMessage(`Export failed: ${error.message}`, "error");
+        }
+      }
+
+      function generateReport() {
+        if (!enhancedTestSystem) {
+          logMessage("No test data available for report", "warning");
+          return;
+        }
+
+        logMessage("Generating comprehensive test report...", "info");
+
+        // This would generate a detailed HTML report
+        // Implementation would create a new window with formatted results
+        const reportWindow = window.open("", "_blank");
+        reportWindow.document.write(`
+                <html>
+                    <head><title>Jump Test Report</title></head>
+                    <body>
+                        <h1>Comprehensive Jump Test Report</h1>
+                        <p>Report generated at: ${new Date().toLocaleString()}</p>
+                        <p>Detailed report generation would be implemented here...</p>
+                    </body>
+                </html>
+            `);
+
+        logMessage("Report generated", "success");
+      }
+
+      function stopAllTests() {
+        if (enhancedTestSystem && enhancedTestSystem.testState.isRunning) {
+          enhancedTestSystem.testState.isRunning = false;
+          logMessage("All tests stopped", "warning");
+          updateStatus("Tests stopped", "failed");
+        }
+      }
+
+      // UI helper functions
+      function displayTestCategory(categoryName, results) {
+        const resultsContainer = document.getElementById("testResults");
+
+        const categoryHtml = createTestCategoryHtml(categoryName, results);
+        resultsContainer.innerHTML = categoryHtml + resultsContainer.innerHTML;
+      }
+
+      function displayFullTestResults(results) {
+        const resultsContainer = document.getElementById("testResults");
+        resultsContainer.innerHTML = "";
+
+        // Display overall summary
+        const summaryHtml = createOverallSummaryHtml(results);
+        resultsContainer.innerHTML += summaryHtml;
+
+        // Display each category
+        results.testCategories.forEach((category) => {
+          const categoryHtml = createTestCategoryHtml(category.name, category);
+          resultsContainer.innerHTML += categoryHtml;
+        });
+      }
+
+      function displayBenchmarkResults(results) {
+        const benchmarkSection = document.getElementById("benchmarkSection");
+        benchmarkSection.style.display = "block";
+
+        const chartContainer = document.getElementById("benchmarkChart");
+        chartContainer.innerHTML = createBenchmarkVisualization(results);
+      }
+
+      function createTestCategoryHtml(categoryName, results) {
+        const successRate =
+          results.summary.total > 0
+            ? (results.summary.passed / results.summary.total) * 100
+            : 0;
+
+        const testsHtml = results.tests
+          ? results.tests
+              .map(
+                (test) => `
+                <div class="test-item ${test.success ? "" : "failed"}">
+                    <h4>
+                        <span>
+                            <span class="test-status-icon">${
+                              test.success ? "✅" : "❌"
+                            }</span>
+                            ${test.name}
+                        </span>
+                        <span class="test-duration">${test.duration.toFixed(
+                          0
+                        )}ms</span>
+                    </h4>
+                    <p>${test.message}</p>
+                    ${
+                      test.details && Object.keys(test.details).length > 0
+                        ? `
+                        <div class="test-details">
+                            <strong>Details:</strong>
+                            <pre>${JSON.stringify(test.details, null, 2)}</pre>
+                        </div>
+                    `
+                        : ""
+                    }
+                </div>
+            `
+              )
+              .join("")
+          : "";
+
+        return `
+                <div class="test-category">
+                    <h3>
+                        ${getIconForCategory(categoryName)} ${categoryName}
+                    </h3>
+                    <div class="category-summary">
+                        <div class="summary-item">
+                            <span class="summary-number total">${
+                              results.summary.total
+                            }</span>
+                            <span>Total</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number passed">${
+                              results.summary.passed
+                            }</span>
+                            <span>Passed</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number failed">${
+                              results.summary.failed
+                            }</span>
+                            <span>Failed</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">${successRate.toFixed(
+                              1
+                            )}%</span>
+                            <span>Success Rate</span>
+                        </div>
+                    </div>
+                    ${testsHtml}
+                </div>
+            `;
+      }
+
+      function createOverallSummaryHtml(results) {
+        return `
+                <div class="alert ${
+                  results.summary.successRate >= 90
+                    ? "success"
+                    : results.summary.successRate >= 70
+                    ? "warning"
+                    : "error"
+                }">
+                    <h3>📊 Overall Test Results</h3>
+                    <p>
+                        <strong>Success Rate:</strong> ${results.summary.successRate.toFixed(
+                          1
+                        )}%
+                        (${results.summary.passed}/${
+          results.summary.totalTests
+        } tests passed)
+                    </p>
+                    <p><strong>Duration:</strong> ${results.summary.duration.toFixed(
+                      0
+                    )}ms</p>
+                    <p><strong>Environment:</strong> ${
+                      results.environment.userAgent
+                    }</p>
+                </div>
+            `;
+      }
+
+      function createBenchmarkVisualization(results) {
+        // Simple text-based visualization for now
+        // In a real implementation, this would use a charting library
+        return `
+                <h4>Benchmark Metrics</h4>
+                <div class="metrics-grid">
+                    ${Object.entries(results.metrics)
+                      .map(
+                        ([key, value]) => `
+                        <div class="metric-card">
+                            <span class="metric-value">${
+                              typeof value === "object"
+                                ? value.average?.toFixed(1) || "N/A"
+                                : value
+                            }</span>
+                            <span class="metric-label">${key}</span>
+                        </div>
+                    `
+                      )
+                      .join("")}
+                </div>
+            `;
+      }
+
+      function getIconForCategory(categoryName) {
+        const icons = {
+          "Basic Functionality Tests": "🔧",
+          "Edge Case Tests": "⚡",
+          "Performance Tests": "📊",
+          "Stress Tests": "💪",
+          "Browser Compatibility Tests": "🌐",
+          "Regression Tests": "🔄",
+        };
+        return icons[categoryName] || "🧪";
+      }
+
+      function showRegressionAlert() {
+        const alertHtml = `
+                <div class="regression-alert">
+                    <h3>⚠️ Regression Detected!</h3>
+                    <p>Performance or functionality has degraded compared to the baseline.</p>
+                    <p>Please review the test results and investigate the issues.</p>
+                </div>
+            `;
+
+        const resultsContainer = document.getElementById("testResults");
+        resultsContainer.innerHTML = alertHtml + resultsContainer.innerHTML;
+      }
+
+      function logMessage(message, type = "info") {
+        const logOutput = document.getElementById("logOutput");
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement("div");
+        logEntry.className = `log-entry ${type}`;
+        logEntry.textContent = `[${timestamp}] ${message}`;
+
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+
+        // Keep only last 100 log entries
+        while (logOutput.children.length > 100) {
+          logOutput.removeChild(logOutput.firstChild);
+        }
+      }
+
+      function updateStatus(message, type = "idle") {
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("statusText");
+
+        statusDot.className = `status-dot ${type}`;
+        statusText.textContent = message;
+      }
+
+      function updateProgress(percentage) {
+        const progressFill = document.getElementById("progressFill");
+        const progressText = document.getElementById("progressText");
+
+        progressFill.style.width = `${percentage}%`;
+        progressText.textContent = `${Math.round(percentage)}%`;
+      }
+
+      // Initialize system when page loads
+      window.addEventListener("load", initializeSystem);
+
+      // Handle keyboard events for manual testing
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space") {
+          logMessage(`Manual space key detected: ${event.timeStamp}`, "info");
+        }
+      });
+
+      // Handle window unload to save test data
+      window.addEventListener("beforeunload", () => {
+        if (enhancedTestSystem) {
+          // Save test data to localStorage before leaving
+          try {
+            const data = {
+              testResults: enhancedTestSystem.getTestHistory(),
+              benchmarks: enhancedTestSystem.getBenchmarkData(),
+              timestamp: Date.now(),
+            };
+            localStorage.setItem("jumpTestBackup", JSON.stringify(data));
+          } catch (error) {
+            console.warn("Failed to save test data backup:", error);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

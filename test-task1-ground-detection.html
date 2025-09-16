@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 1: Enhanced Ground Detection Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .test-container {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .test-pass {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .test-fail {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .diagnostic-data {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .requirements-check {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .requirement-item {
+        margin: 5px 0;
+        padding: 5px;
+      }
+      .requirement-pass {
+        color: #155724;
+        background-color: #d4edda;
+      }
+      .requirement-fail {
+        color: #721c24;
+        background-color: #f8d7da;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Task 1: Enhanced Ground Detection Implementation Test</h1>
+
+    <div class="test-container">
+      <h2>Requirements Verification</h2>
+      <p>Testing implementation against task requirements:</p>
+      <ul>
+        <li>Player クラスの `enhancedGroundCheck()` メソッドを実装</li>
+        <li>複数の方法（物理判定、位置判定、速度判定）で地面状態を検証</li>
+        <li>地面接触の履歴を記録する `lastGroundContact` プロパティを追加</li>
+        <li>地面判定の信頼度を計算する機能を実装</li>
+      </ul>
+      <button onclick="runRequirementsTest()">
+        Verify Requirements Implementation
+      </button>
+    </div>
+
+    <div class="test-container">
+      <h2>Functional Tests</h2>
+      <button onclick="runEnhancedGroundCheckTest()">
+        Test enhancedGroundCheck() Method
+      </button>
+      <button onclick="runMultipleDetectionMethodsTest()">
+        Test Multiple Detection Methods
+      </button>
+      <button onclick="runGroundContactHistoryTest()">
+        Test Ground Contact History
+      </button>
+      <button onclick="runConfidenceCalculationTest()">
+        Test Confidence Calculation
+      </button>
+      <button onclick="runIntegrationTest()">Run Integration Test</button>
+      <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <!-- Load game scripts in correct order -->
+    <script src="js/audio-manager.js"></script>
+    <script src="js/player.js"></script>
+
+    <script>
+      let testResults = [];
+
+      function addTestResult(testName, passed, message, data = null) {
+        const result = {
+          testName,
+          passed,
+          message,
+          data,
+          timestamp: new Date().toISOString(),
+        };
+        testResults.push(result);
+        displayResults();
+      }
+
+      function displayResults() {
+        const container = document.getElementById("test-results");
+        container.innerHTML = "";
+
+        testResults.forEach((result) => {
+          const div = document.createElement("div");
+          div.className = "test-container";
+
+          const resultDiv = document.createElement("div");
+          resultDiv.className = `test-result ${
+            result.passed ? "test-pass" : "test-fail"
+          }`;
+          resultDiv.innerHTML = `
+                    <strong>${result.testName}</strong><br>
+                    ${result.message}<br>
+                    <small>Time: ${result.timestamp}</small>
+                `;
+
+          div.appendChild(resultDiv);
+
+          if (result.data) {
+            const dataDiv = document.createElement("div");
+            dataDiv.className = "diagnostic-data";
+            dataDiv.textContent = JSON.stringify(result.data, null, 2);
+            div.appendChild(dataDiv);
+          }
+
+          container.appendChild(div);
+        });
+      }
+
+      function clearResults() {
+        testResults = [];
+        displayResults();
+      }
+
+      function runRequirementsTest() {
+        try {
+          const player = new Player(100, 100);
+          const requirements = [];
+
+          // Requirement 1: enhancedGroundCheck() method exists
+          const hasEnhancedGroundCheck =
+            typeof player.enhancedGroundCheck === "function";
+          requirements.push({
+            name: "enhancedGroundCheck() method implemented",
+            passed: hasEnhancedGroundCheck,
+            details: hasEnhancedGroundCheck
+              ? "Method exists"
+              : "Method missing",
+          });
+
+          // Requirement 2: Multiple detection methods
+          const hasPositionCheck =
+            typeof player.checkGroundByPosition === "function";
+          const hasVelocityCheck =
+            typeof player.checkGroundByVelocity === "function";
+          const hasConfidenceCalc =
+            typeof player.calculateGroundConfidence === "function";
+
+          requirements.push({
+            name: "Multiple detection methods implemented",
+            passed: hasPositionCheck && hasVelocityCheck && hasConfidenceCalc,
+            details: `Position: ${hasPositionCheck}, Velocity: ${hasVelocityCheck}, Confidence: ${hasConfidenceCalc}`,
+          });
+
+          // Requirement 3: lastGroundContact property
+          const hasLastGroundContact =
+            player.hasOwnProperty("lastGroundContact");
+          requirements.push({
+            name: "lastGroundContact property added",
+            passed: hasLastGroundContact,
+            details: hasLastGroundContact
+              ? `Value: ${player.lastGroundContact}`
+              : "Property missing",
+          });
+
+          // Requirement 4: Ground detection history
+          const hasGroundHistory =
+            player.hasOwnProperty("groundDetectionHistory") &&
+            Array.isArray(player.groundDetectionHistory);
+          const hasHistoryRecording =
+            typeof player.recordGroundDetectionHistory === "function";
+
+          requirements.push({
+            name: "Ground detection history implemented",
+            passed: hasGroundHistory && hasHistoryRecording,
+            details: `History array: ${hasGroundHistory}, Recording method: ${hasHistoryRecording}`,
+          });
+
+          // Requirement 5: Confidence calculation
+          const confidenceTest = player.calculateGroundConfidence({
+            physicsGroundCheck: true,
+            positionGroundCheck: false,
+            velocityGroundCheck: true,
+          });
+          const hasConfidenceCalculation =
+            typeof confidenceTest === "number" &&
+            confidenceTest >= 0 &&
+            confidenceTest <= 1;
+
+          requirements.push({
+            name: "Confidence calculation implemented",
+            passed: hasConfidenceCalculation,
+            details: `Confidence value: ${confidenceTest}`,
+          });
+
+          const allRequirementsPassed = requirements.every((req) => req.passed);
+
+          addTestResult(
+            "Requirements Verification",
+            allRequirementsPassed,
+            allRequirementsPassed
+              ? "All requirements implemented correctly"
+              : "Some requirements not met",
+            { requirements }
+          );
+        } catch (error) {
+          addTestResult(
+            "Requirements Verification - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runEnhancedGroundCheckTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Test the enhanced ground check method
+          const groundCheck = player.enhancedGroundCheck();
+
+          // Verify structure
+          const hasRequiredStructure =
+            typeof groundCheck === "object" &&
+            groundCheck.hasOwnProperty("isOnGround") &&
+            groundCheck.hasOwnProperty("confidence") &&
+            groundCheck.hasOwnProperty("details") &&
+            groundCheck.hasOwnProperty("timestamp") &&
+            groundCheck.hasOwnProperty("diagnostics");
+
+          // Verify details structure
+          const hasDetailsStructure =
+            groundCheck.details &&
+            groundCheck.details.hasOwnProperty("physicsGroundCheck") &&
+            groundCheck.details.hasOwnProperty("positionGroundCheck") &&
+            groundCheck.details.hasOwnProperty("velocityGroundCheck");
+
+          const testPassed = hasRequiredStructure && hasDetailsStructure;
+
+          addTestResult(
+            "Enhanced Ground Check Method",
+            testPassed,
+            testPassed
+              ? "Method returns correct structure with all required properties"
+              : "Method structure is incomplete",
+            {
+              groundCheck,
+              hasRequiredStructure,
+              hasDetailsStructure,
+            }
+          );
+        } catch (error) {
+          addTestResult(
+            "Enhanced Ground Check Method - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runMultipleDetectionMethodsTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Test individual detection methods
+          const positionResult = player.checkGroundByPosition();
+          const velocityResult = player.checkGroundByVelocity();
+
+          // Test that they return boolean values
+          const positionValid = typeof positionResult === "boolean";
+          const velocityValid = typeof velocityResult === "boolean";
+
+          // Test enhanced ground check uses all methods
+          const enhancedResult = player.enhancedGroundCheck();
+          const usesAllMethods =
+            enhancedResult.details.hasOwnProperty("physicsGroundCheck") &&
+            enhancedResult.details.hasOwnProperty("positionGroundCheck") &&
+            enhancedResult.details.hasOwnProperty("velocityGroundCheck");
+
+          const testPassed = positionValid && velocityValid && usesAllMethods;
+
+          addTestResult(
+            "Multiple Detection Methods",
+            testPassed,
+            testPassed
+              ? "All detection methods work correctly"
+              : "Some detection methods failed",
+            {
+              positionResult,
+              velocityResult,
+              positionValid,
+              velocityValid,
+              usesAllMethods,
+              enhancedDetails: enhancedResult.details,
+            }
+          );
+        } catch (error) {
+          addTestResult(
+            "Multiple Detection Methods - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runGroundContactHistoryTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Initial state
+          const initialHistoryLength = player.groundDetectionHistory.length;
+          const initialLastContact = player.lastGroundContact;
+
+          // Perform multiple ground checks
+          const checkCount = 5;
+          for (let i = 0; i < checkCount; i++) {
+            player.enhancedGroundCheck();
+            // Small delay to ensure different timestamps
+            const start = performance.now();
+            while (performance.now() - start < 1) {} // 1ms delay
+          }
+
+          // Check history recording
+          const finalHistoryLength = player.groundDetectionHistory.length;
+          const historyRecorded = finalHistoryLength === checkCount;
+
+          // Check lastGroundContact update
+          const lastContactUpdated =
+            player.lastGroundContact > initialLastContact;
+
+          // Test history structure
+          const historyHasCorrectStructure =
+            player.groundDetectionHistory.every(
+              (entry) =>
+                entry.hasOwnProperty("timestamp") &&
+                entry.hasOwnProperty("physicsGroundCheck") &&
+                entry.hasOwnProperty("positionGroundCheck") &&
+                entry.hasOwnProperty("velocityGroundCheck") &&
+                entry.hasOwnProperty("combinedResult") &&
+                entry.hasOwnProperty("confidence")
+            );
+
+          const testPassed =
+            historyRecorded && lastContactUpdated && historyHasCorrectStructure;
+
+          addTestResult(
+            "Ground Contact History",
+            testPassed,
+            testPassed
+              ? `History recorded correctly (${finalHistoryLength} entries)`
+              : "History recording failed",
+            {
+              initialHistoryLength,
+              finalHistoryLength,
+              historyRecorded,
+              lastContactUpdated,
+              historyHasCorrectStructure,
+              sampleHistoryEntry: player.groundDetectionHistory[0],
+            }
+          );
+        } catch (error) {
+          addTestResult(
+            "Ground Contact History - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runConfidenceCalculationTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Test different confidence scenarios
+          const scenarios = [
+            {
+              name: "All methods positive",
+              physics: true,
+              position: true,
+              velocity: true,
+              expectedMin: 0.9,
+            },
+            {
+              name: "Physics only",
+              physics: true,
+              position: false,
+              velocity: false,
+              expectedRange: [0.5, 0.7],
+            },
+            {
+              name: "No methods positive",
+              physics: false,
+              position: false,
+              velocity: false,
+              expected: 0.0,
+            },
+          ];
+
+          let allTestsPass = true;
+          const results = [];
+
+          scenarios.forEach((scenario) => {
+            const confidence = player.calculateGroundConfidence({
+              physicsGroundCheck: scenario.physics,
+              positionGroundCheck: scenario.position,
+              velocityGroundCheck: scenario.velocity,
+            });
+
+            let testPass = true;
+            if (scenario.expected !== undefined) {
+              testPass = Math.abs(confidence - scenario.expected) < 0.01;
+            } else if (scenario.expectedMin !== undefined) {
+              testPass = confidence >= scenario.expectedMin;
+            } else if (scenario.expectedRange !== undefined) {
+              testPass =
+                confidence >= scenario.expectedRange[0] &&
+                confidence <= scenario.expectedRange[1];
+            }
+
+            if (!testPass) allTestsPass = false;
+
+            results.push({
+              scenario: scenario.name,
+              confidence,
+              passed: testPass,
+            });
+          });
+
+          addTestResult(
+            "Confidence Calculation",
+            allTestsPass,
+            allTestsPass
+              ? "All confidence calculation scenarios passed"
+              : "Some confidence calculations failed",
+            { results }
+          );
+        } catch (error) {
+          addTestResult(
+            "Confidence Calculation - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      function runIntegrationTest() {
+        try {
+          const player = new Player(100, 100);
+
+          // Test integration with existing player functionality
+
+          // 1. Test that enhanced ground check is used in jump validation
+          const jumpValidation = player.validateJumpConditions();
+          const usesEnhancedGroundCheck =
+            jumpValidation.groundCheckDetails &&
+            jumpValidation.groundCheckDetails.hasOwnProperty("confidence");
+
+          // 2. Test that ground detection data is included in player state
+          const playerState = player.getState();
+          const stateIncludesGroundData =
+            playerState.hasOwnProperty("lastGroundContact") &&
+            playerState.hasOwnProperty("groundDetectionHistory") &&
+            playerState.hasOwnProperty("groundTolerance");
+
+          // 3. Test diagnostics functionality
+          const diagnostics = player.getGroundDetectionDiagnostics();
+          const diagnosticsWork =
+            typeof diagnostics === "object" &&
+            diagnostics.hasOwnProperty("lastGroundContact") &&
+            diagnostics.hasOwnProperty("timeSinceLastContact") &&
+            diagnostics.hasOwnProperty("averageConfidence");
+
+          // 4. Test reset functionality includes new properties
+          const beforeReset = {
+            lastGroundContact: player.lastGroundContact,
+            historyLength: player.groundDetectionHistory.length,
+          };
+
+          player.enhancedGroundCheck(); // Add some data
+          player.reset();
+
+          const afterReset = {
+            lastGroundContact: player.lastGroundContact,
+            historyLength: player.groundDetectionHistory.length,
+          };
+
+          const resetWorks =
+            afterReset.lastGroundContact === 0 &&
+            afterReset.historyLength === 0;
+
+          const integrationPassed =
+            usesEnhancedGroundCheck &&
+            stateIncludesGroundData &&
+            diagnosticsWork &&
+            resetWorks;
+
+          addTestResult(
+            "Integration Test",
+            integrationPassed,
+            integrationPassed
+              ? "Enhanced ground detection integrates correctly with existing functionality"
+              : "Integration issues detected",
+            {
+              usesEnhancedGroundCheck,
+              stateIncludesGroundData,
+              diagnosticsWork,
+              resetWorks,
+              beforeReset,
+              afterReset,
+            }
+          );
+        } catch (error) {
+          addTestResult(
+            "Integration Test - Error",
+            false,
+            `Test failed with error: ${error.message}`,
+            { error: error.stack }
+          );
+        }
+      }
+
+      // Run initial system check
+      window.addEventListener("load", () => {
+        addTestResult(
+          "System Check",
+          true,
+          "Task 1 Enhanced Ground Detection Test System Loaded Successfully",
+          {
+            timestamp: performance.now(),
+            playerClassAvailable: typeof Player !== "undefined",
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Jump Conditions Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .test-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .test-pass {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .test-fail {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .test-info {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .log-output {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Enhanced Jump Conditions Test</h1>
+    <p>
+      Testing the enhanced jump condition validation with coyote time (100ms
+      tolerance)
+    </p>
+
+    <div class="test-container">
+      <h2>Test Controls</h2>
+      <button onclick="runAllTests()">Run All Tests</button>
+      <button onclick="clearResults()">Clear Results</button>
+      <button onclick="testCoyoteTime()">Test Coyote Time</button>
+      <button onclick="testGroundDetection()">Test Ground Detection</button>
+      <button onclick="testBlockingConditions()">
+        Test Blocking Conditions
+      </button>
+    </div>
+
+    <div class="test-container">
+      <h2>Test Results</h2>
+      <div id="test-results"></div>
+    </div>
+
+    <div class="test-container">
+      <h2>Console Log Output</h2>
+      <div id="log-output" class="log-output"></div>
+    </div>
+
+    <script src="js/player.js"></script>
+    <script>
+      let testResults = [];
+      let originalConsoleLog = console.log;
+      let originalConsoleWarn = console.warn;
+      let logOutput = "";
+
+      // Override console methods to capture output
+      console.log = function (...args) {
+        logOutput +=
+          "[LOG] " +
+          args
+            .map((arg) =>
+              typeof arg === "object" ? JSON.stringify(arg, null, 2) : arg
+            )
+            .join(" ") +
+          "\n";
+        originalConsoleLog.apply(console, args);
+        updateLogDisplay();
+      };
+
+      console.warn = function (...args) {
+        logOutput +=
+          "[WARN] " +
+          args
+            .map((arg) =>
+              typeof arg === "object" ? JSON.stringify(arg, null, 2) : arg
+            )
+            .join(" ") +
+          "\n";
+        originalConsoleWarn.apply(console, args);
+        updateLogDisplay();
+      };
+
+      function updateLogDisplay() {
+        document.getElementById("log-output").textContent = logOutput;
+        document.getElementById("log-output").scrollTop =
+          document.getElementById("log-output").scrollHeight;
+      }
+
+      function addTestResult(testName, passed, message, details = null) {
+        testResults.push({
+          name: testName,
+          passed: passed,
+          message: message,
+          details: details,
+          timestamp: new Date().toISOString(),
+        });
+        updateTestDisplay();
+      }
+
+      function updateTestDisplay() {
+        const container = document.getElementById("test-results");
+        container.innerHTML = "";
+
+        testResults.forEach((result) => {
+          const div = document.createElement("div");
+          div.className = `test-result ${
+            result.passed ? "test-pass" : "test-fail"
+          }`;
+
+          let html = `<strong>${result.name}</strong>: ${result.message}`;
+          if (result.details) {
+            html += `<br><small>${JSON.stringify(
+              result.details,
+              null,
+              2
+            )}</small>`;
+          }
+
+          div.innerHTML = html;
+          container.appendChild(div);
+        });
+      }
+
+      function clearResults() {
+        testResults = [];
+        logOutput = "";
+        updateTestDisplay();
+        updateLogDisplay();
+      }
+
+      function createTestPlayer() {
+        const player = new Player(100, 500);
+        // Set up some basic state
+        player.isOnGround = true;
+        player.lastGroundContact = performance.now();
+        return player;
+      }
+
+      function testCoyoteTime() {
+        console.log("\n=== Testing Coyote Time (100ms tolerance) ===");
+
+        const player = createTestPlayer();
+
+        // Test 1: Player on ground should be able to jump
+        player.isOnGround = true;
+        player.lastGroundContact = performance.now();
+        const result1 = player.canJumpEnhanced();
+        addTestResult(
+          "Coyote Time - On Ground",
+          result1.canJump,
+          result1.canJump
+            ? "Player can jump when on ground"
+            : "Player cannot jump when on ground",
+          { reason: result1.reason, enhancedChecks: result1.enhancedChecks }
+        );
+
+        // Test 2: Player just left ground (within 100ms) should be able to jump
+        player.isOnGround = false;
+        player.lastGroundContact = performance.now() - 50; // 50ms ago
+        const result2 = player.canJumpEnhanced();
+        addTestResult(
+          "Coyote Time - Recently Off Ground (50ms)",
+          result2.canJump,
+          result2.canJump
+            ? "Player can jump within coyote time"
+            : "Player cannot jump within coyote time",
+          { reason: result2.reason, enhancedChecks: result2.enhancedChecks }
+        );
+
+        // Test 3: Player left ground too long ago (over 100ms) should not be able to jump
+        player.isOnGround = false;
+        player.lastGroundContact = performance.now() - 150; // 150ms ago
+        const result3 = player.canJumpEnhanced();
+        addTestResult(
+          "Coyote Time - Too Long Off Ground (150ms)",
+          !result3.canJump,
+          !result3.canJump
+            ? "Player correctly blocked from jumping after coyote time"
+            : "Player incorrectly allowed to jump after coyote time",
+          { reason: result3.reason, enhancedChecks: result3.enhancedChecks }
+        );
+
+        // Test 4: Edge case - exactly at 100ms boundary
+        player.isOnGround = false;
+        player.lastGroundContact = performance.now() - 100; // exactly 100ms ago
+        const result4 = player.canJumpEnhanced();
+        addTestResult(
+          "Coyote Time - Boundary Case (100ms)",
+          result4.canJump,
+          result4.canJump
+            ? "Player can jump at boundary"
+            : "Player cannot jump at boundary",
+          { reason: result4.reason, enhancedChecks: result4.enhancedChecks }
+        );
+      }
+
+      function testGroundDetection() {
+        console.log("\n=== Testing Enhanced Ground Detection ===");
+
+        const player = createTestPlayer();
+
+        // Test enhanced ground check method
+        player.isOnGround = true;
+        const groundCheck1 = player.enhancedGroundCheck();
+        addTestResult(
+          "Enhanced Ground Detection - On Ground",
+          groundCheck1.isOnGround,
+          groundCheck1.isOnGround
+            ? "Enhanced ground detection works when on ground"
+            : "Enhanced ground detection fails when on ground",
+          { confidence: groundCheck1.confidence, details: groundCheck1.details }
+        );
+
+        // Test ground detection when physics says false but position might indicate ground
+        player.isOnGround = false;
+        player.position.y = 568; // Near bottom of 600px canvas
+        const groundCheck2 = player.enhancedGroundCheck();
+        addTestResult(
+          "Enhanced Ground Detection - Position Based",
+          groundCheck2.details.positionGroundCheck !== undefined,
+          "Position-based ground detection executed",
+          { confidence: groundCheck2.confidence, details: groundCheck2.details }
+        );
+
+        // Test velocity-based ground detection
+        player.velocity.y = 0; // Stationary
+        const groundCheck3 = player.enhancedGroundCheck();
+        addTestResult(
+          "Enhanced Ground Detection - Velocity Based",
+          groundCheck3.details.velocityGroundCheck !== undefined,
+          "Velocity-based ground detection executed",
+          { confidence: groundCheck3.confidence, details: groundCheck3.details }
+        );
+      }
+
+      function testBlockingConditions() {
+        console.log("\n=== Testing Blocking Conditions ===");
+
+        const player = createTestPlayer();
+
+        // Test blocking state prevents jumping
+        player.isOnGround = true;
+        player.isBlocking = true;
+        const result1 = player.canJumpEnhanced();
+        addTestResult(
+          "Blocking Conditions - Is Blocking",
+          !result1.canJump && result1.blockingFactors.includes("is_blocking"),
+          !result1.canJump
+            ? "Blocking correctly prevents jumping"
+            : "Blocking does not prevent jumping",
+          { reason: result1.reason, blockingFactors: result1.blockingFactors }
+        );
+
+        // Test dashing state prevents jumping
+        player.isBlocking = false;
+        player.state = "dashing";
+        const result2 = player.canJumpEnhanced();
+        addTestResult(
+          "Blocking Conditions - Is Dashing",
+          !result2.canJump && result2.blockingFactors.includes("is_dashing"),
+          !result2.canJump
+            ? "Dashing correctly prevents jumping"
+            : "Dashing does not prevent jumping",
+          { reason: result2.reason, blockingFactors: result2.blockingFactors }
+        );
+
+        // Test zero jump power prevents jumping
+        player.state = "idle";
+        player.jumpPower = 0;
+        const result3 = player.canJumpEnhanced();
+        addTestResult(
+          "Blocking Conditions - No Jump Power",
+          !result3.canJump && result3.blockingFactors.includes("no_jump_power"),
+          !result3.canJump
+            ? "Zero jump power correctly prevents jumping"
+            : "Zero jump power does not prevent jumping",
+          { reason: result3.reason, blockingFactors: result3.blockingFactors }
+        );
+
+        // Test normal conditions allow jumping
+        player.jumpPower = 400; // Reset to normal
+        const result4 = player.canJumpEnhanced();
+        addTestResult(
+          "Blocking Conditions - Normal Conditions",
+          result4.canJump,
+          result4.canJump
+            ? "Normal conditions allow jumping"
+            : "Normal conditions prevent jumping",
+          { reason: result4.reason, blockingFactors: result4.blockingFactors }
+        );
+      }
+
+      function testJumpExecution() {
+        console.log("\n=== Testing Jump Execution ===");
+
+        const player = createTestPlayer();
+
+        // Test successful jump execution
+        player.isOnGround = true;
+        player.lastGroundContact = performance.now();
+        const jumpResult1 = player.jump();
+        addTestResult(
+          "Jump Execution - Normal Jump",
+          jumpResult1 && player.velocity.y < 0 && player.state === "jumping",
+          jumpResult1 ? "Jump executed successfully" : "Jump execution failed",
+          {
+            velocityY: player.velocity.y,
+            state: player.state,
+            isOnGround: player.isOnGround,
+          }
+        );
+
+        // Test coyote time jump execution
+        const player2 = createTestPlayer();
+        player2.isOnGround = false;
+        player2.lastGroundContact = performance.now() - 50; // 50ms ago
+        const jumpResult2 = player2.jump();
+        addTestResult(
+          "Jump Execution - Coyote Time Jump",
+          jumpResult2 && player2.velocity.y < 0 && player2.state === "jumping",
+          jumpResult2
+            ? "Coyote time jump executed successfully"
+            : "Coyote time jump execution failed",
+          {
+            velocityY: player2.velocity.y,
+            state: player2.state,
+            timeSinceGround: performance.now() - player2.lastGroundContact,
+          }
+        );
+      }
+
+      function runAllTests() {
+        clearResults();
+        console.log("Starting Enhanced Jump Conditions Test Suite...");
+
+        testCoyoteTime();
+        testGroundDetection();
+        testBlockingConditions();
+        testJumpExecution();
+
+        console.log("Test suite completed.");
+
+        // Summary
+        const totalTests = testResults.length;
+        const passedTests = testResults.filter((r) => r.passed).length;
+        const failedTests = totalTests - passedTests;
+
+        addTestResult(
+          "TEST SUMMARY",
+          failedTests === 0,
+          `${passedTests}/${totalTests} tests passed`,
+          { passed: passedTests, failed: failedTests, total: totalTests }
+        );
+      }
+
+      // Run tests automatically on page load
+      window.addEventListener("load", () => {
+        console.log("Enhanced Jump Conditions Test Page Loaded");
+        runAllTests();
+      });
+    </script>
+  </body>
+</html>

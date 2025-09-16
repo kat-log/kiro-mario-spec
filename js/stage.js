@@ -270,12 +270,17 @@ class Stage {
             entity.velocity.y > 0 &&
             entity.position.y < platform.position.y
           ) {
-            const resolution = physicsEngine.resolveCollision(entity, platform);
+            // Use enhanced collision resolution for better ground contact tracking
+            const resolution = physicsEngine.resolveCollisionEnhanced
+              ? physicsEngine.resolveCollisionEnhanced(entity, platform)
+              : physicsEngine.resolveCollision(entity, platform);
             collisions.push({ platform, resolution });
           }
         } else {
-          // Normal solid platform collision
-          const resolution = physicsEngine.resolveCollision(entity, platform);
+          // Normal solid platform collision - use enhanced resolution
+          const resolution = physicsEngine.resolveCollisionEnhanced
+            ? physicsEngine.resolveCollisionEnhanced(entity, platform)
+            : physicsEngine.resolveCollision(entity, platform);
           collisions.push({ platform, resolution });
         }
       }

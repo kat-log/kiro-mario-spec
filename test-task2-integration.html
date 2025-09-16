@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 2 Integration Test - Enhanced Jump Conditions</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+      .test-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      .log-output {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .test-details {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Task 2 Integration Test</h1>
+    <p>
+      Testing the enhanced jump condition validation with coyote time (100ms
+      tolerance)
+    </p>
+
+    <div class="test-container">
+      <h2>Implementation Verification</h2>
+      <div id="implementation-status"></div>
+      <button onclick="verifyImplementation()">Verify Implementation</button>
+      <button onclick="testCoyoteTime()">Test Coyote Time</button>
+      <button onclick="testJumpExecution()">Test Jump Execution</button>
+      <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="test-container">
+      <h2>Test Results</h2>
+      <div id="test-results"></div>
+    </div>
+
+    <div class="test-container">
+      <h2>Console Output</h2>
+      <div id="console-output" class="log-output"></div>
+    </div>
+
+    <script src="js/player.js"></script>
+    <script>
+      let consoleOutput = "";
+      const originalConsoleLog = console.log;
+      const originalConsoleWarn = console.warn;
+
+      // Capture console output
+      console.log = function (...args) {
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        consoleOutput += `[LOG] ${message}\n`;
+        originalConsoleLog.apply(console, args);
+        updateConsoleDisplay();
+      };
+
+      console.warn = function (...args) {
+        const message = args
+          .map((arg) =>
+            typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+          )
+          .join(" ");
+        consoleOutput += `[WARN] ${message}\n`;
+        originalConsoleWarn.apply(console, args);
+        updateConsoleDisplay();
+      };
+
+      function updateConsoleDisplay() {
+        const output = document.getElementById("console-output");
+        output.textContent = consoleOutput;
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function clearLogs() {
+        consoleOutput = "";
+        updateConsoleDisplay();
+        document.getElementById("test-results").innerHTML = "";
+      }
+
+      function addResult(title, success, details) {
+        const container = document.getElementById("test-results");
+        const div = document.createElement("div");
+        div.className = `status ${success ? "success" : "error"}`;
+        div.innerHTML = `<strong>${title}</strong>: ${
+          success ? "PASS" : "FAIL"
+        }`;
+
+        if (details) {
+          const detailsDiv = document.createElement("div");
+          detailsDiv.className = "test-details";
+          detailsDiv.innerHTML = `<pre>${JSON.stringify(
+            details,
+            null,
+            2
+          )}</pre>`;
+          div.appendChild(detailsDiv);
+        }
+
+        container.appendChild(div);
+      }
+
+      function verifyImplementation() {
+        console.log("=== Verifying Task 2 Implementation ===");
+
+        try {
+          const player = new Player(100, 500);
+
+          // Check if canJumpEnhanced method exists
+          const hasCanJumpEnhanced =
+            typeof player.canJumpEnhanced === "function";
+          addResult("canJumpEnhanced method exists", hasCanJumpEnhanced);
+
+          if (!hasCanJumpEnhanced) {
+            addResult(
+              "Implementation Check",
+              false,
+              "canJumpEnhanced method not found"
+            );
+            return;
+          }
+
+          // Check if generateJumpFailureRecommendations method exists
+          const hasRecommendations =
+            typeof player.generateJumpFailureRecommendations === "function";
+          addResult(
+            "generateJumpFailureRecommendations method exists",
+            hasRecommendations
+          );
+
+          // Test basic functionality
+          player.isOnGround = true;
+          player.lastGroundContact = performance.now();
+          const validation = player.canJumpEnhanced();
+
+          const hasRequiredProperties =
+            validation &&
+            typeof validation.canJump === "boolean" &&
+            typeof validation.reason === "string" &&
+            Array.isArray(validation.blockingFactors) &&
+            validation.enhancedChecks &&
+            validation.groundCheckDetails;
+
+          addResult(
+            "Enhanced validation returns correct structure",
+            hasRequiredProperties,
+            {
+              canJump: validation.canJump,
+              reason: validation.reason,
+              hasEnhancedChecks: !!validation.enhancedChecks,
+              hasGroundCheckDetails: !!validation.groundCheckDetails,
+            }
+          );
+
+          // Test that jump method uses enhanced validation
+          const jumpResult = player.jump();
+          addResult(
+            "Jump method executes with enhanced validation",
+            jumpResult,
+            {
+              velocityY: player.velocity.y,
+              state: player.state,
+              isOnGround: player.isOnGround,
+            }
+          );
+
+          addResult(
+            "Implementation Check",
+            true,
+            "All required methods and functionality verified"
+          );
+        } catch (error) {
+          addResult("Implementation Check", false, error.message);
+        }
+      }
+
+      function testCoyoteTime() {
+        console.log("=== Testing Coyote Time Feature ===");
+
+        try {
+          // Test 1: Player on ground
+          const player1 = new Player(100, 500);
+          player1.isOnGround = true;
+          player1.lastGroundContact = performance.now();
+          const result1 = player1.canJumpEnhanced();
+          addResult("On Ground - Can Jump", result1.canJump, {
+            reason: result1.reason,
+            timeSinceGround: result1.enhancedChecks.timeSinceGroundContact,
+          });
+
+          // Test 2: Recently off ground (50ms)
+          const player2 = new Player(100, 500);
+          player2.isOnGround = false;
+          player2.lastGroundContact = performance.now() - 50;
+          const result2 = player2.canJumpEnhanced();
+          addResult("Coyote Time 50ms - Can Jump", result2.canJump, {
+            reason: result2.reason,
+            timeSinceGround: result2.enhancedChecks.timeSinceGroundContact,
+            recentlyOnGround: result2.enhancedChecks.recentlyOnGround,
+          });
+
+          // Test 3: Too long off ground (150ms)
+          const player3 = new Player(100, 500);
+          player3.isOnGround = false;
+          player3.lastGroundContact = performance.now() - 150;
+          const result3 = player3.canJumpEnhanced();
+          addResult(
+            "Too Long Off Ground 150ms - Cannot Jump",
+            !result3.canJump,
+            {
+              reason: result3.reason,
+              timeSinceGround: result3.enhancedChecks.timeSinceGroundContact,
+              recentlyOnGround: result3.enhancedChecks.recentlyOnGround,
+            }
+          );
+
+          // Test 4: Boundary case (100ms)
+          const player4 = new Player(100, 500);
+          player4.isOnGround = false;
+          player4.lastGroundContact = performance.now() - 100;
+          const result4 = player4.canJumpEnhanced();
+          addResult("Boundary Case 100ms - Can Jump", result4.canJump, {
+            reason: result4.reason,
+            timeSinceGround: result4.enhancedChecks.timeSinceGroundContact,
+            recentlyOnGround: result4.enhancedChecks.recentlyOnGround,
+          });
+        } catch (error) {
+          addResult("Coyote Time Test", false, error.message);
+        }
+      }
+
+      function testJumpExecution() {
+        console.log("=== Testing Jump Execution with Enhanced Validation ===");
+
+        try {
+          // Test successful jump with coyote time
+          const player = new Player(100, 500);
+          player.isOnGround = false;
+          player.lastGroundContact = performance.now() - 75; // Within coyote time
+
+          const preJumpVelocity = player.velocity.y;
+          const preJumpState = player.state;
+
+          const jumpResult = player.jump();
+
+          const velocityChanged = player.velocity.y !== preJumpVelocity;
+          const stateChanged = player.state !== preJumpState;
+          const jumpedUpward = player.velocity.y < 0;
+
+          addResult(
+            "Coyote Time Jump Execution",
+            jumpResult && velocityChanged && jumpedUpward,
+            {
+              jumpResult: jumpResult,
+              preJumpVelocity: preJumpVelocity,
+              postJumpVelocity: player.velocity.y,
+              preJumpState: preJumpState,
+              postJumpState: player.state,
+              velocityChanged: velocityChanged,
+              stateChanged: stateChanged,
+              jumpedUpward: jumpedUpward,
+            }
+          );
+
+          // Test jump failure with detailed logging
+          const player2 = new Player(100, 500);
+          player2.isOnGround = false;
+          player2.lastGroundContact = performance.now() - 200; // Too long ago
+
+          const jumpResult2 = player2.jump();
+          addResult("Jump Failure with Detailed Logging", !jumpResult2, {
+            jumpResult: jumpResult2,
+            timeSinceGround: performance.now() - player2.lastGroundContact,
+          });
+        } catch (error) {
+          addResult("Jump Execution Test", false, error.message);
+        }
+      }
+
+      // Auto-run verification on page load
+      window.addEventListener("load", () => {
+        console.log("Task 2 Integration Test Page Loaded");
+        setTimeout(() => {
+          verifyImplementation();
+        }, 500);
+      });
+    </script>
+  </body>
+</html>

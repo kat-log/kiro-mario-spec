@@ -137,6 +137,9 @@ class GameEngine {
     // Initialize browser compatibility and bug detection systems
     await this.initCompatibilityAndBugSystems();
 
+    // Initialize enhanced debug display system
+    this.initDebugDisplaySystem();
+
     // Start continuous monitoring
     if (this.bugDetector) {
       this.bugDetector.startContinuousMonitoring();
@@ -144,6 +147,9 @@ class GameEngine {
 
     // Make test runner globally available
     window.TestRunner = new TestRunner(this);
+
+    // Make game engine globally available for debug integration
+    window.gameEngine = this;
 
     console.log("GameEngine initialized successfully");
     console.log(`Canvas size: ${this.canvas.width}x${this.canvas.height}`);
@@ -331,6 +337,11 @@ class GameEngine {
       this.performanceOptimizer.update(deltaTime);
     }
 
+    // Update debug display system
+    if (this.debugDisplaySystem) {
+      this.debugDisplaySystem.update(deltaTime);
+    }
+
     // Update input manager first
     this.inputManager.update();
 
@@ -419,18 +430,28 @@ class GameEngine {
 
     // Check for key presses (not held)
     if (inputManager.isKeyPressed("F1")) {
-      // Toggle performance overlay
-      this.showPerformanceOverlay = !this.showPerformanceOverlay;
-      console.log(
-        `Performance overlay: ${this.showPerformanceOverlay ? "ON" : "OFF"}`
-      );
+      // Toggle enhanced debug display
+      if (this.debugDisplaySystem) {
+        this.debugDisplaySystem.toggle();
+      } else {
+        // Fallback to performance overlay
+        this.showPerformanceOverlay = !this.showPerformanceOverlay;
+        console.log(
+          `Performance overlay: ${this.showPerformanceOverlay ? "ON" : "OFF"}`
+        );
+      }
     }
 
     if (inputManager.isKeyPressed("F2")) {
-      // Run integration tests
-      this.runIntegrationTests().then((results) => {
-        console.log("Integration tests completed:", results);
-      });
+      // Cycle debug display mode or run integration tests
+      if (this.debugDisplaySystem && this.debugDisplaySystem.isVisible) {
+        this.debugDisplaySystem.cycleDisplayMode();
+      } else {
+        // Run integration tests when debug display is not visible
+        this.runIntegrationTests().then((results) => {
+          console.log("Integration tests completed:", results);
+        });
+      }
     }
 
     if (inputManager.isKeyPressed("F3")) {
@@ -634,146 +655,244 @@ class GameEngine {
   }
 
   /**
-   * Update physics for all entities
+   * Update physics for all entities with optimized update order
    */
   updatePhysics(deltaTime) {
-    // Update player physics with enhanced ground detection
-    if (this.player && this.currentStage) {
-      // Store previous ground state for comparison
-      const wasOnGround = this.player.isOnGround;
-      const prePhysicsState = {
-        position: { ...this.player.position },
-        velocity: { ...this.player.velocity },
-        isOnGround: this.player.isOnGround,
+    if (!this.player || !this.currentStage) return;
+
+    console.log(
+      `[PHYSICS] Starting physics update - deltaTime: ${deltaTime.toFixed(2)}ms`
+    );
+
+    // 1. Store input processing state before physics updates
+    const preUpdateState = {
+      position: { ...this.player.position },
+      velocity: { ...this.player.velocity },
+      isOnGround: this.player.isOnGround,
+      timestamp: performance.now(),
+    };
+
+    console.log(`[PHYSICS] Pre-update state:`, {
+      position: preUpdateState.position,
+      velocity: preUpdateState.velocity,
+      isOnGround: preUpdateState.isOnGround,
+    });
+
+    // 2. Apply gravity and friction while preserving ground state continuity
+    console.log(`[PHYSICS] Stage 1: Applying gravity and friction`);
+
+    // Store ground state before physics forces are applied
+    const groundStateBeforeForces = this.player.isOnGround;
+
+    // Apply gravity to the player
+    this.physicsEngine.applyGravity(this.player, deltaTime);
+    console.log(
+      `[PHYSICS] Gravity applied - velocity.y: ${this.player.velocity.y.toFixed(
+        2
+      )}`
+    );
+
+    // Apply friction/air resistance using preserved ground state
+    this.physicsEngine.applyFriction(
+      this.player,
+      deltaTime,
+      groundStateBeforeForces // Use ground state from before forces were applied
+    );
+    console.log(
+      `[PHYSICS] Friction applied - velocity: x=${this.player.velocity.x.toFixed(
+        2
+      )}, y=${this.player.velocity.y.toFixed(2)}`
+    );
+
+    // 3. Update position based on velocity
+    console.log(`[PHYSICS] Stage 2: Updating position`);
+    const positionBeforeUpdate = { ...this.player.position };
+
+    this.physicsEngine.updatePosition(this.player, deltaTime);
+
+    console.log(`[PHYSICS] Position updated:`, {
+      from: positionBeforeUpdate,
+      to: { ...this.player.position },
+      displacement: {
+        x: this.player.position.x - positionBeforeUpdate.x,
+        y: this.player.position.y - positionBeforeUpdate.y,
+      },
+    });
+
+    // 4. Enhanced collision detection and resolution
+    console.log(`[PHYSICS] Stage 3: Collision detection and resolution`);
+
+    const collisions = this.currentStage.checkPlatformCollisions(
+      this.player,
+      this.physicsEngine
+    );
+
+    let groundCollisionDetected = false;
+    const collisionDetails = [];
+
+    // Process collision results with enhanced validation
+    for (const collision of collisions) {
+      const collisionInfo = {
+        platform: collision.platform
+          ? collision.platform.id || "unknown"
+          : "stage_bound",
+        resolution: collision.resolution,
+        overlap: collision.resolution.overlap,
       };
+      collisionDetails.push(collisionInfo);
 
-      // Reset ground state for this frame
-      this.player.isOnGround = false;
+      console.log(`[PHYSICS] Processing collision:`, collisionInfo);
 
-      // Apply gravity to the player
-      this.physicsEngine.applyGravity(this.player, deltaTime);
+      if (
+        collision.resolution.resolved &&
+        collision.resolution.direction === "bottom"
+      ) {
+        groundCollisionDetected = true;
 
-      // Apply friction/air resistance
-      this.physicsEngine.applyFriction(
-        this.player,
-        deltaTime,
-        wasOnGround // Use previous frame's ground state for friction calculation
-      );
-
-      // Update position based on velocity
-      this.physicsEngine.updatePosition(this.player, deltaTime);
-
-      // Enhanced collision detection with detailed logging
-      const collisions = this.currentStage.checkPlatformCollisions(
-        this.player,
-        this.physicsEngine
-      );
-
-      let groundCollisionDetected = false;
-      const collisionDetails = [];
-
-      // Process collision results with enhanced validation
-      for (const collision of collisions) {
-        collisionDetails.push({
-          platform: collision.platform
-            ? collision.platform.id || "unknown"
-            : "stage_bound",
-          resolution: collision.resolution,
-          overlap: collision.resolution.overlap,
-        });
-
-        if (
-          collision.resolution.resolved &&
-          collision.resolution.direction === "bottom"
-        ) {
-          this.player.isOnGround = true;
-          groundCollisionDetected = true;
-
-          // Additional validation for ground collision
-          const groundValidation = this.validateGroundCollision(
-            collision,
-            this.player
+        // Additional validation for ground collision
+        const groundValidation = this.validateGroundCollision(
+          collision,
+          this.player
+        );
+        if (!groundValidation.isValid) {
+          console.warn(
+            `[PHYSICS] Ground collision validation failed:`,
+            groundValidation
           );
-          if (!groundValidation.isValid) {
-            console.warn(
-              `[PHYSICS] Ground collision validation failed:`,
-              groundValidation
-            );
-          }
+        } else {
+          console.log(`[PHYSICS] Valid ground collision detected`);
         }
       }
-
-      // Enhanced stage bounds checking
-      const stageBounds = this.currentStage.getBounds();
-      let boundaryCollision = false;
-
-      // Horizontal bounds
-      if (this.player.position.x < stageBounds.left) {
-        this.player.position.x = stageBounds.left;
-        this.player.velocity.x = 0;
-        boundaryCollision = true;
-      } else if (
-        this.player.position.x + this.player.size.width >
-        stageBounds.right
-      ) {
-        this.player.position.x = stageBounds.right - this.player.size.width;
-        this.player.velocity.x = 0;
-        boundaryCollision = true;
-      }
-
-      // Enhanced bottom boundary check with ground state validation
-      if (
-        this.player.position.y + this.player.size.height >=
-        stageBounds.bottom
-      ) {
-        this.player.position.y = stageBounds.bottom - this.player.size.height;
-        this.player.velocity.y = 0;
-        this.player.isOnGround = true;
-        boundaryCollision = true;
-
-        console.log(`[PHYSICS] Player hit stage bottom boundary`, {
-          playerBottom: this.player.position.y + this.player.size.height,
-          stageBottom: stageBounds.bottom,
-          correctedPosition: this.player.position.y,
-        });
-      }
-
-      // Log ground state changes for debugging
-      if (wasOnGround !== this.player.isOnGround) {
-        console.log(
-          `[PHYSICS] Ground state changed: ${wasOnGround} -> ${this.player.isOnGround}`,
-          {
-            prePhysicsState,
-            postPhysicsState: {
-              position: { ...this.player.position },
-              velocity: { ...this.player.velocity },
-              isOnGround: this.player.isOnGround,
-            },
-            collisionDetails,
-            groundCollisionDetected,
-            boundaryCollision,
-            frameTime: deltaTime,
-          }
-        );
-      }
-
-      // Additional ground state validation
-      this.validatePlayerGroundState();
     }
 
-    // Update test ball physics (keep for demonstration)
+    // 5. Update ground state after collision resolution
+    console.log(`[PHYSICS] Stage 4: Ground state update`);
+
+    const wasOnGround = this.player.isOnGround;
+    let newGroundState = false;
+
+    // Ground state from platform collisions
+    if (groundCollisionDetected) {
+      newGroundState = true;
+      // Record ground contact time for enhanced jump conditions
+      if (this.player.lastGroundContact !== undefined) {
+        this.player.lastGroundContact = performance.now();
+      }
+      console.log(`[PHYSICS] Ground state set by platform collision`);
+    }
+
+    // Enhanced stage bounds checking
+    const stageBounds = this.currentStage.getBounds();
+    let boundaryCollision = false;
+
+    // Horizontal bounds
+    if (this.player.position.x < stageBounds.left) {
+      this.player.position.x = stageBounds.left;
+      this.player.velocity.x = 0;
+      boundaryCollision = true;
+      console.log(`[PHYSICS] Left boundary collision - position corrected`);
+    } else if (
+      this.player.position.x + this.player.size.width >
+      stageBounds.right
+    ) {
+      this.player.position.x = stageBounds.right - this.player.size.width;
+      this.player.velocity.x = 0;
+      boundaryCollision = true;
+      console.log(`[PHYSICS] Right boundary collision - position corrected`);
+    }
+
+    // Enhanced bottom boundary check with ground state validation
+    if (
+      this.player.position.y + this.player.size.height >=
+      stageBounds.bottom
+    ) {
+      this.player.position.y = stageBounds.bottom - this.player.size.height;
+      this.player.velocity.y = 0;
+      newGroundState = true;
+      boundaryCollision = true;
+
+      // Record ground contact time
+      if (this.player.lastGroundContact !== undefined) {
+        this.player.lastGroundContact = performance.now();
+      }
+
+      console.log(`[PHYSICS] Bottom boundary collision:`, {
+        playerBottom: this.player.position.y + this.player.size.height,
+        stageBottom: stageBounds.bottom,
+        correctedPosition: this.player.position.y,
+      });
+    }
+
+    // Apply the new ground state
+    this.player.isOnGround = newGroundState;
+
+    // 6. Log physics update completion with detailed state information
+    console.log(`[PHYSICS] Stage 5: Physics update completed`);
+
+    const postPhysicsState = {
+      position: { ...this.player.position },
+      velocity: { ...this.player.velocity },
+      isOnGround: this.player.isOnGround,
+      timestamp: performance.now(),
+    };
+
+    // Log ground state changes for debugging
+    if (wasOnGround !== this.player.isOnGround) {
+      console.log(
+        `[PHYSICS] Ground state changed: ${wasOnGround} -> ${this.player.isOnGround}`,
+        {
+          preUpdateState,
+          postPhysicsState,
+          collisionDetails,
+          groundCollisionDetected,
+          boundaryCollision,
+          frameTime: deltaTime,
+          processingTime: postPhysicsState.timestamp - preUpdateState.timestamp,
+        }
+      );
+    }
+
+    // Additional ground state validation
+    this.validatePlayerGroundState();
+
+    console.log(`[PHYSICS] Physics update summary:`, {
+      deltaTime: deltaTime.toFixed(2),
+      positionChange: {
+        x: (postPhysicsState.position.x - preUpdateState.position.x).toFixed(2),
+        y: (postPhysicsState.position.y - preUpdateState.position.y).toFixed(2),
+      },
+      velocityChange: {
+        x: (postPhysicsState.velocity.x - preUpdateState.velocity.x).toFixed(2),
+        y: (postPhysicsState.velocity.y - preUpdateState.velocity.y).toFixed(2),
+      },
+      groundStateChange: `${preUpdateState.isOnGround} -> ${postPhysicsState.isOnGround}`,
+      collisionsProcessed: collisions.length,
+      processingTime:
+        (postPhysicsState.timestamp - preUpdateState.timestamp).toFixed(2) +
+        "ms",
+    });
+
+    // Update test ball physics with optimized approach (keep for demonstration)
     if (this.testBall && this.currentStage) {
-      // Reset ground state
-      this.testBall.isOnGround = false;
+      console.log(`[PHYSICS] Updating test ball physics`);
+
+      const testBallPreState = {
+        position: { ...this.testBall.position },
+        velocity: { ...this.testBall.velocity },
+        isOnGround: this.testBall.isOnGround,
+      };
+
+      // Store ground state before applying forces
+      const testBallGroundStateBeforeForces = this.testBall.isOnGround;
 
       // Apply gravity to the test ball
       this.physicsEngine.applyGravity(this.testBall, deltaTime);
 
-      // Apply friction/air resistance
+      // Apply friction/air resistance using preserved ground state
       this.physicsEngine.applyFriction(
         this.testBall,
         deltaTime,
-        this.testBall.isOnGround
+        testBallGroundStateBeforeForces
       );
 
       // Update position based on velocity
@@ -785,15 +904,18 @@ class GameEngine {
         this.physicsEngine
       );
 
-      // Process collision results
+      // Update ground state after collision resolution
+      let testBallNewGroundState = false;
       for (const collision of ballCollisions) {
         if (
           collision.resolution.resolved &&
           collision.resolution.direction === "bottom"
         ) {
-          this.testBall.isOnGround = true;
+          testBallNewGroundState = true;
+          break;
         }
       }
+      this.testBall.isOnGround = testBallNewGroundState;
 
       // Keep ball within stage bounds (horizontal wrapping)
       const stageBounds = this.currentStage.getBounds();
@@ -807,7 +929,21 @@ class GameEngine {
       if (this.testBall.position.y > stageBounds.bottom + 100) {
         this.testBall.position.y = -this.testBall.size.height;
         this.testBall.velocity.y = 0;
+        this.testBall.isOnGround = false;
       }
+
+      console.log(`[PHYSICS] Test ball physics completed:`, {
+        positionChange: {
+          x: (this.testBall.position.x - testBallPreState.position.x).toFixed(
+            2
+          ),
+          y: (this.testBall.position.y - testBallPreState.position.y).toFixed(
+            2
+          ),
+        },
+        groundStateChange: `${testBallPreState.isOnGround} -> ${this.testBall.isOnGround}`,
+        collisionsProcessed: ballCollisions.length,
+      });
     }
   }
 
@@ -898,11 +1034,20 @@ class GameEngine {
         break;
     }
 
-    // Always render debug info
-    this.renderDebugInfo();
+    // Render enhanced debug display if available
+    if (this.debugDisplaySystem) {
+      this.debugDisplaySystem.render(this.ctx);
+    } else {
+      // Fallback to basic debug info
+      this.renderDebugInfo();
+    }
 
-    // Render performance overlay if enabled
-    if (this.performanceOptimizer && this.showPerformanceOverlay) {
+    // Render performance overlay if enabled (when debug display is not active)
+    if (
+      this.performanceOptimizer &&
+      this.showPerformanceOverlay &&
+      (!this.debugDisplaySystem || !this.debugDisplaySystem.isVisible)
+    ) {
       this.performanceOptimizer.renderOverlay(this.ctx);
     }
   }
@@ -1357,7 +1502,19 @@ class GameEngine {
     const startY = this.canvas.height - 200; // Above the ground
     this.player = new Player(startX, startY, this.audioManager);
 
-    console.log("Player initialized");
+    // Set reference to game engine for debug display integration
+    this.player.gameEngine = this;
+
+    // Initialize Jump Diagnostic System
+    this.jumpDiagnosticSystem = new JumpDiagnosticSystem(
+      this.player,
+      this.inputManager
+    );
+
+    // Connect diagnostic system to player
+    this.player.setJumpDiagnosticSystem(this.jumpDiagnosticSystem);
+
+    console.log("Player initialized with Jump Diagnostic System");
   }
 
   /**
@@ -1769,6 +1926,19 @@ class GameEngine {
    */
   getAudioManager() {
     return this.audioManager;
+  }
+
+  /**
+   * Initialize enhanced debug display system
+   */
+  initDebugDisplaySystem() {
+    try {
+      this.debugDisplaySystem = new DebugDisplaySystem(this);
+      console.log("Enhanced debug display system initialized");
+    } catch (error) {
+      console.warn("Failed to initialize debug display system:", error);
+      this.debugDisplaySystem = null;
+    }
   }
 
   /**

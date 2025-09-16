@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 3: Physics Update Order Optimization Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-section {
+        background-color: #fff;
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .game-container {
+        text-align: center;
+        margin: 20px 0;
+      }
+
+      canvas {
+        border: 2px solid #333;
+        background-color: #87ceeb;
+      }
+
+      .controls {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #e8f4f8;
+        border-radius: 5px;
+      }
+
+      .log-container {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f8f8f8;
+        border-radius: 5px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .log-entry {
+        margin: 2px 0;
+        padding: 2px 5px;
+      }
+
+      .log-physics {
+        background-color: #e8f5e8;
+      }
+      .log-ground {
+        background-color: #fff3cd;
+      }
+      .log-collision {
+        background-color: #f8d7da;
+      }
+
+      .test-results {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #d4edda;
+        border-radius: 5px;
+      }
+
+      .test-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin: 5px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .test-button:hover {
+        background-color: #0056b3;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-pass {
+        background-color: #28a745;
+      }
+      .status-fail {
+        background-color: #dc3545;
+      }
+      .status-pending {
+        background-color: #ffc107;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Task 3: Physics Update Order Optimization Test</h1>
+        <p>
+          Testing the optimized physics engine update order for improved ground
+          detection continuity
+        </p>
+      </div>
+
+      <div class="test-section">
+        <h2>Test Objectives</h2>
+        <ul>
+          <li>
+            Verify input processing state is preserved before physics updates
+          </li>
+          <li>Confirm ground state continuity is maintained across frames</li>
+          <li>Validate collision detection occurs after position updates</li>
+          <li>Check that ground state is updated after collision resolution</li>
+          <li>Ensure detailed logging is present for each physics stage</li>
+        </ul>
+      </div>
+
+      <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+      </div>
+
+      <div class="controls">
+        <h3>Test Controls</h3>
+        <p><strong>Movement:</strong> Arrow Keys or WASD</p>
+        <p><strong>Jump:</strong> Space, Up Arrow, W, or Enter</p>
+        <p><strong>Test Actions:</strong></p>
+        <button class="test-button" onclick="runPhysicsOrderTest()">
+          Test Physics Update Order
+        </button>
+        <button class="test-button" onclick="runGroundStateContinuityTest()">
+          Test Ground State Continuity
+        </button>
+        <button class="test-button" onclick="runCollisionTimingTest()">
+          Test Collision Timing
+        </button>
+        <button class="test-button" onclick="clearLogs()">Clear Logs</button>
+        <button class="test-button" onclick="toggleDetailedLogging()">
+          Toggle Detailed Logging
+        </button>
+      </div>
+
+      <div class="test-results" id="testResults">
+        <h3>Test Results</h3>
+        <div id="testStatus">
+          <div>
+            <span class="status-indicator status-pending"></span>Physics Update
+            Order: Pending
+          </div>
+          <div>
+            <span class="status-indicator status-pending"></span>Ground State
+            Continuity: Pending
+          </div>
+          <div>
+            <span class="status-indicator status-pending"></span>Collision
+            Timing: Pending
+          </div>
+          <div>
+            <span class="status-indicator status-pending"></span>Logging
+            Completeness: Pending
+          </div>
+        </div>
+      </div>
+
+      <div class="log-container" id="logContainer">
+        <h3>Physics Update Logs</h3>
+        <div id="logOutput"></div>
+      </div>
+    </div>
+
+    <!-- Game Engine Scripts -->
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      let gameEngine;
+      let testResults = {
+        physicsOrder: false,
+        groundContinuity: false,
+        collisionTiming: false,
+        loggingComplete: false,
+      };
+      let detailedLogging = true;
+      let physicsLogs = [];
+
+      // Override console.log to capture physics logs
+      const originalConsoleLog = console.log;
+      console.log = function (...args) {
+        originalConsoleLog.apply(console, args);
+
+        if (
+          args[0] &&
+          typeof args[0] === "string" &&
+          args[0].includes("[PHYSICS]")
+        ) {
+          physicsLogs.push({
+            timestamp: performance.now(),
+            message: args[0],
+            data: args[1] || null,
+          });
+
+          if (detailedLogging) {
+            displayLog(args[0], args[1]);
+          }
+        }
+      };
+
+      function displayLog(message, data) {
+        const logOutput = document.getElementById("logOutput");
+        const logEntry = document.createElement("div");
+        logEntry.className = "log-entry";
+
+        if (message.includes("Ground state")) {
+          logEntry.className += " log-ground";
+        } else if (message.includes("collision")) {
+          logEntry.className += " log-collision";
+        } else {
+          logEntry.className += " log-physics";
+        }
+
+        logEntry.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+        if (data) {
+          logEntry.innerHTML += `<br><pre>${JSON.stringify(
+            data,
+            null,
+            2
+          )}</pre>`;
+        }
+
+        logOutput.appendChild(logEntry);
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }
+
+      function clearLogs() {
+        document.getElementById("logOutput").innerHTML = "";
+        physicsLogs = [];
+      }
+
+      function toggleDetailedLogging() {
+        detailedLogging = !detailedLogging;
+        const button = event.target;
+        button.textContent = detailedLogging
+          ? "Disable Detailed Logging"
+          : "Enable Detailed Logging";
+      }
+
+      function updateTestStatus(test, passed) {
+        testResults[test] = passed;
+        const statusDiv = document.getElementById("testStatus");
+        const indicators = statusDiv.querySelectorAll(".status-indicator");
+        const testNames = [
+          "physicsOrder",
+          "groundContinuity",
+          "collisionTiming",
+          "loggingComplete",
+        ];
+
+        testNames.forEach((testName, index) => {
+          const indicator = indicators[index];
+          if (testResults[testName] === true) {
+            indicator.className = "status-indicator status-pass";
+          } else if (testResults[testName] === false && testName === test) {
+            indicator.className = "status-indicator status-fail";
+          }
+        });
+      }
+
+      async function runPhysicsOrderTest() {
+        console.log("[TEST] Starting Physics Update Order Test");
+        clearLogs();
+
+        // Simulate a jump and monitor the physics update order
+        const initialGroundState = gameEngine.player.isOnGround;
+
+        // Trigger a jump
+        gameEngine.inputManager.simulateKeyPress("Space");
+
+        // Wait for a few frames to collect physics logs
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        // Analyze the logs for correct order
+        const recentLogs = physicsLogs.slice(-20);
+        let hasPreUpdateState = false;
+        let hasGravityApplication = false;
+        let hasPositionUpdate = false;
+        let hasCollisionDetection = false;
+        let hasGroundStateUpdate = false;
+
+        recentLogs.forEach((log) => {
+          if (log.message.includes("Pre-update state"))
+            hasPreUpdateState = true;
+          if (log.message.includes("Gravity applied"))
+            hasGravityApplication = true;
+          if (log.message.includes("Position updated"))
+            hasPositionUpdate = true;
+          if (log.message.includes("Collision detection"))
+            hasCollisionDetection = true;
+          if (log.message.includes("Ground state update"))
+            hasGroundStateUpdate = true;
+        });
+
+        const orderCorrect =
+          hasPreUpdateState &&
+          hasGravityApplication &&
+          hasPositionUpdate &&
+          hasCollisionDetection &&
+          hasGroundStateUpdate;
+
+        updateTestStatus("physicsOrder", orderCorrect);
+        console.log(
+          `[TEST] Physics Order Test: ${orderCorrect ? "PASSED" : "FAILED"}`
+        );
+
+        return orderCorrect;
+      }
+
+      async function runGroundStateContinuityTest() {
+        console.log("[TEST] Starting Ground State Continuity Test");
+        clearLogs();
+
+        // Monitor ground state changes over multiple frames
+        const groundStates = [];
+        const monitorDuration = 1000; // 1 second
+        const startTime = performance.now();
+
+        const monitor = () => {
+          if (performance.now() - startTime < monitorDuration) {
+            groundStates.push({
+              timestamp: performance.now(),
+              isOnGround: gameEngine.player.isOnGround,
+              lastGroundContact: gameEngine.player.lastGroundContact,
+            });
+            requestAnimationFrame(monitor);
+          }
+        };
+
+        monitor();
+
+        // Wait for monitoring to complete
+        await new Promise((resolve) =>
+          setTimeout(resolve, monitorDuration + 100)
+        );
+
+        // Analyze ground state continuity
+        let continuityMaintained = true;
+        let groundContactUpdated = false;
+
+        for (let i = 1; i < groundStates.length; i++) {
+          const prev = groundStates[i - 1];
+          const curr = groundStates[i];
+
+          // Check if ground contact timestamp is updated when on ground
+          if (
+            curr.isOnGround &&
+            curr.lastGroundContact > prev.lastGroundContact
+          ) {
+            groundContactUpdated = true;
+          }
+
+          // Check for unrealistic ground state changes
+          if (
+            prev.isOnGround &&
+            !curr.isOnGround &&
+            curr.timestamp - prev.timestamp < 16
+          ) {
+            // Less than one frame
+            continuityMaintained = false;
+          }
+        }
+
+        const testPassed = continuityMaintained && groundContactUpdated;
+        updateTestStatus("groundContinuity", testPassed);
+        console.log(
+          `[TEST] Ground Continuity Test: ${testPassed ? "PASSED" : "FAILED"}`
+        );
+
+        return testPassed;
+      }
+
+      async function runCollisionTimingTest() {
+        console.log("[TEST] Starting Collision Timing Test");
+        clearLogs();
+
+        // Force player to ground and monitor collision timing
+        gameEngine.player.position.y = 500; // Near ground
+        gameEngine.player.velocity.y = 100; // Falling
+
+        // Wait for collision to occur
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Analyze collision timing in logs
+        const recentLogs = physicsLogs.slice(-10);
+        let positionUpdateBeforeCollision = false;
+        let collisionAfterPosition = false;
+        let groundStateAfterCollision = false;
+
+        for (let i = 0; i < recentLogs.length - 1; i++) {
+          const current = recentLogs[i];
+          const next = recentLogs[i + 1];
+
+          if (
+            current.message.includes("Position updated") &&
+            next.message.includes("Collision detection")
+          ) {
+            positionUpdateBeforeCollision = true;
+            collisionAfterPosition = true;
+          }
+
+          if (
+            current.message.includes("Collision detection") &&
+            next.message.includes("Ground state update")
+          ) {
+            groundStateAfterCollision = true;
+          }
+        }
+
+        const timingCorrect =
+          positionUpdateBeforeCollision &&
+          collisionAfterPosition &&
+          groundStateAfterCollision;
+
+        updateTestStatus("collisionTiming", timingCorrect);
+        console.log(
+          `[TEST] Collision Timing Test: ${timingCorrect ? "PASSED" : "FAILED"}`
+        );
+
+        return timingCorrect;
+      }
+
+      function checkLoggingCompleteness() {
+        const requiredLogTypes = [
+          "Starting physics update",
+          "Pre-update state",
+          "Applying gravity and friction",
+          "Updating position",
+          "Collision detection and resolution",
+          "Ground state update",
+          "Physics update summary",
+        ];
+
+        const recentLogs = physicsLogs.slice(-20);
+        const foundLogTypes = requiredLogTypes.filter((logType) =>
+          recentLogs.some((log) => log.message.includes(logType))
+        );
+
+        const loggingComplete =
+          foundLogTypes.length === requiredLogTypes.length;
+        updateTestStatus("loggingComplete", loggingComplete);
+
+        return loggingComplete;
+      }
+
+      // Initialize the game
+      async function initGame() {
+        const canvas = document.getElementById("gameCanvas");
+        gameEngine = new GameEngine(canvas);
+
+        const initialized = await gameEngine.init();
+        if (initialized) {
+          gameEngine.start();
+          gameEngine.startGame();
+          console.log("[TEST] Game engine initialized for physics testing");
+
+          // Check logging completeness after a short delay
+          setTimeout(() => {
+            checkLoggingCompleteness();
+          }, 2000);
+        } else {
+          console.error("[TEST] Failed to initialize game engine");
+        }
+      }
+
+      // Start the test when page loads
+      window.addEventListener("load", initGame);
+    </script>
+  </body>
+</html>

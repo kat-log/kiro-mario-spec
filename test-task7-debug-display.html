@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task 7: Enhanced Debug Display System Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .test-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .controls {
+        background: #e8f4f8;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .controls button {
+        margin: 5px;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        background: #007acc;
+        color: white;
+        cursor: pointer;
+      }
+
+      .controls button:hover {
+        background: #005a9e;
+      }
+
+      .controls button.success {
+        background: #28a745;
+      }
+
+      .controls button.warning {
+        background: #ffc107;
+        color: #212529;
+      }
+
+      .controls button.danger {
+        background: #dc3545;
+      }
+
+      #game-canvas {
+        border: 2px solid #333;
+        display: block;
+        margin: 20px auto;
+      }
+
+      .log-container {
+        background: #1e1e1e;
+        color: #00ff00;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        padding: 15px;
+        border-radius: 5px;
+        height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      .status-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        border-left: 4px solid #007acc;
+      }
+
+      .status-item h4 {
+        margin: 0 0 5px 0;
+        color: #333;
+      }
+
+      .status-item .value {
+        font-weight: bold;
+        color: #007acc;
+      }
+
+      .instructions {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .instructions h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .requirements {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .requirements h3 {
+        margin-top: 0;
+        color: #155724;
+      }
+
+      .requirements ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+
+      .requirements li {
+        margin: 5px 0;
+      }
+
+      .verification-results {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 20px;
+      }
+
+      .verification-results h3 {
+        margin-top: 0;
+        color: #495057;
+      }
+
+      .test-result {
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .test-result.pass {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .test-result.fail {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Task 7: Enhanced Debug Display System Test</h1>
+
+      <div class="requirements">
+        <h3>Task 7 Requirements:</h3>
+        <ul>
+          <li>プレイヤーの地面判定状態をリアルタイム表示</li>
+          <li>ジャンプ条件の詳細情報を画面上に表示</li>
+          <li>物理エンジンの更新状況を可視化</li>
+          <li>F1 キーでデバッグ情報の表示/非表示を切り替え</li>
+        </ul>
+      </div>
+
+      <div class="instructions">
+        <h3>Test Instructions:</h3>
+        <ul>
+          <li><strong>F1</strong> - Toggle debug display on/off</li>
+          <li>
+            <strong>F2</strong> - Cycle through display modes (full, minimal,
+            physics, input)
+          </li>
+          <li>
+            <strong>Space/Arrow Up/W/Enter</strong> - Jump (test input
+            detection)
+          </li>
+          <li><strong>Arrow Keys/WASD</strong> - Move player</li>
+          <li><strong>Shift</strong> - Dash</li>
+          <li><strong>S/Arrow Down</strong> - Block</li>
+        </ul>
+        <p>
+          <strong>Note:</strong> Click on the game canvas first to ensure it has
+          focus for keyboard input.
+        </p>
+      </div>
+
+      <div class="controls">
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="runVerification()" class="success">
+          Run Verification Tests
+        </button>
+        <button onclick="toggleDebugDisplay()">
+          Toggle Debug Display (F1)
+        </button>
+        <button onclick="cycleDisplayMode()">Cycle Display Mode (F2)</button>
+        <button onclick="testAllDisplayModes()">Test All Display Modes</button>
+        <button onclick="testJumpInputs()">Test Jump Inputs</button>
+        <button onclick="simulatePhysicsEvents()">
+          Simulate Physics Events
+        </button>
+        <button onclick="getDebugStats()">Get Debug Stats</button>
+        <button onclick="resetDebugData()">Reset Debug Data</button>
+        <button onclick="clearLog()">Clear Log</button>
+      </div>
+
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+
+      <div class="test-section">
+        <h3>Debug Display Status</h3>
+        <div class="status" id="status-grid">
+          <div class="status-item">
+            <h4>Debug Display</h4>
+            <div class="value" id="debug-visible">Not Available</div>
+          </div>
+          <div class="status-item">
+            <h4>Display Mode</h4>
+            <div class="value" id="display-mode">Unknown</div>
+          </div>
+          <div class="status-item">
+            <h4>Game State</h4>
+            <div class="value" id="game-state">Not Started</div>
+          </div>
+          <div class="status-item">
+            <h4>Player State</h4>
+            <div class="value" id="player-state">Not Available</div>
+          </div>
+          <div class="status-item">
+            <h4>Frame Data</h4>
+            <div class="value" id="frame-data">0 frames</div>
+          </div>
+          <div class="status-item">
+            <h4>Physics Events</h4>
+            <div class="value" id="physics-events">0 events</div>
+          </div>
+          <div class="status-item">
+            <h4>Input Events</h4>
+            <div class="value" id="input-events">0 events</div>
+          </div>
+          <div class="status-item">
+            <h4>Jump Attempts</h4>
+            <div class="value" id="jump-attempts">0 attempts</div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="verification-results"
+        id="verification-results"
+        style="display: none"
+      >
+        <h3>Verification Results</h3>
+        <div id="verification-summary"></div>
+        <div id="verification-details"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>Test Log</h3>
+        <div class="log-container" id="log-container"></div>
+      </div>
+    </div>
+
+    <!-- Game Scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+    <script src="js/main.js"></script>
+    <script src="verify-task7-debug-display.js"></script>
+
+    <script>
+      let gameEngine = null;
+      let testInterval = null;
+      let verification = null;
+
+      function logMessage(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const logContainer = document.getElementById("log-container");
+        const colorMap = {
+          info: "#00ff00",
+          warn: "#ffaa00",
+          error: "#ff0000",
+          success: "#00ffaa",
+        };
+
+        const color = colorMap[type] || "#00ff00";
+        logContainer.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      async function startGame() {
+        try {
+          const canvas = document.getElementById("game-canvas");
+          gameEngine = new GameEngine(canvas);
+
+          await gameEngine.init();
+          gameEngine.start();
+          logMessage("Game engine started successfully", "success");
+
+          // Start the game immediately
+          setTimeout(() => {
+            gameEngine.startGame();
+            logMessage("Game started - debug display ready", "success");
+
+            // Start status updates
+            startStatusUpdates();
+
+            // Enable debug display by default for testing
+            if (gameEngine.debugDisplaySystem) {
+              gameEngine.debugDisplaySystem.setVisible(true);
+              logMessage("Debug display enabled by default", "info");
+            }
+          }, 1000);
+        } catch (error) {
+          logMessage(`Failed to start game: ${error.message}`, "error");
+        }
+      }
+
+      async function runVerification() {
+        try {
+          logMessage("Starting Task 7 verification tests...", "info");
+
+          if (!verification) {
+            verification = new Task7DebugDisplayVerification();
+          }
+
+          const results = await verification.runAllTests();
+          displayVerificationResults(results);
+
+          logMessage("Verification tests completed", "success");
+        } catch (error) {
+          logMessage(`Verification failed: ${error.message}`, "error");
+        }
+      }
+
+      function displayVerificationResults(results) {
+        const resultsContainer = document.getElementById(
+          "verification-results"
+        );
+        const summaryContainer = document.getElementById(
+          "verification-summary"
+        );
+        const detailsContainer = document.getElementById(
+          "verification-details"
+        );
+
+        resultsContainer.style.display = "block";
+
+        // Generate summary
+        const report = verification.generateReport();
+        summaryContainer.innerHTML = `
+                <div class="test-result ${
+                  report.allRequirementsMet ? "pass" : "fail"
+                }">
+                    <strong>Overall Result:</strong> ${
+                      report.allRequirementsMet
+                        ? "✅ TASK 7 SUCCESSFUL"
+                        : "❌ TASK 7 NEEDS ATTENTION"
+                    }<br>
+                    <strong>Tests:</strong> ${report.passedTests}/${
+          report.totalTests
+        } passed (${report.successRate}%)<br>
+                    <strong>Requirements:</strong> ${
+                      report.requirements.filter((r) => r.verified).length
+                    }/${report.requirements.length} verified
+                </div>
+            `;
+
+        // Generate details
+        let detailsHTML = "<h4>Test Results:</h4>";
+        results.forEach((result) => {
+          detailsHTML += `
+                    <div class="test-result ${result.passed ? "pass" : "fail"}">
+                        <strong>${result.passed ? "✅" : "❌"} ${
+            result.test
+          }:</strong> ${result.details}
+                    </div>
+                `;
+        });
+
+        detailsHTML += "<h4>Requirements Verification:</h4>";
+        report.requirements.forEach((req) => {
+          detailsHTML += `
+                    <div class="test-result ${req.verified ? "pass" : "fail"}">
+                        <strong>${req.verified ? "✅" : "❌"} ${
+            req.requirement
+          }</strong>
+                    </div>
+                `;
+        });
+
+        detailsContainer.innerHTML = detailsHTML;
+      }
+
+      function toggleDebugDisplay() {
+        if (gameEngine && gameEngine.debugDisplaySystem) {
+          const isVisible = gameEngine.debugDisplaySystem.toggle();
+          logMessage(
+            `Debug display ${isVisible ? "enabled" : "disabled"}`,
+            "info"
+          );
+        } else {
+          logMessage("Debug display system not available", "warn");
+        }
+      }
+
+      function cycleDisplayMode() {
+        if (gameEngine && gameEngine.debugDisplaySystem) {
+          const mode = gameEngine.debugDisplaySystem.cycleDisplayMode();
+          logMessage(`Display mode changed to: ${mode}`, "info");
+        } else {
+          logMessage("Debug display system not available", "warn");
+        }
+      }
+
+      function testAllDisplayModes() {
+        if (!gameEngine || !gameEngine.debugDisplaySystem) {
+          logMessage("Debug display system not available", "warn");
+          return;
+        }
+
+        const modes = ["full", "minimal", "physics", "input"];
+        let currentMode = 0;
+
+        logMessage("Testing all display modes...", "info");
+        gameEngine.debugDisplaySystem.setVisible(true);
+
+        const testNextMode = () => {
+          if (currentMode >= modes.length) {
+            logMessage("All display modes tested successfully", "success");
+            return;
+          }
+
+          const mode = modes[currentMode];
+          gameEngine.debugDisplaySystem.displayMode = mode;
+          logMessage(`Testing ${mode} mode...`, "info");
+
+          currentMode++;
+          setTimeout(testNextMode, 2000);
+        };
+
+        testNextMode();
+      }
+
+      function testJumpInputs() {
+        if (!gameEngine) {
+          logMessage("Game not started", "warn");
+          return;
+        }
+
+        logMessage("Testing jump inputs...", "info");
+
+        // Test different jump keys
+        const jumpKeys = ["Space", "ArrowUp", "KeyW", "Enter"];
+        let keyIndex = 0;
+
+        const testNextKey = () => {
+          if (keyIndex >= jumpKeys.length) {
+            logMessage("Jump input test completed", "success");
+            return;
+          }
+
+          const key = jumpKeys[keyIndex];
+          logMessage(`Testing ${key} key...`, "info");
+
+          // Simulate key press
+          const keydownEvent = new KeyboardEvent("keydown", {
+            code: key,
+            key: key === "Space" ? " " : key,
+            bubbles: true,
+          });
+
+          const keyupEvent = new KeyboardEvent("keyup", {
+            code: key,
+            key: key === "Space" ? " " : key,
+            bubbles: true,
+          });
+
+          document.dispatchEvent(keydownEvent);
+
+          setTimeout(() => {
+            document.dispatchEvent(keyupEvent);
+            keyIndex++;
+            setTimeout(testNextKey, 500);
+          }, 100);
+        };
+
+        testNextKey();
+      }
+
+      function simulatePhysicsEvents() {
+        if (!gameEngine || !gameEngine.player) {
+          logMessage("Game not started or player not available", "warn");
+          return;
+        }
+
+        logMessage("Simulating physics events...", "info");
+
+        const player = gameEngine.player;
+
+        // Simulate ground state changes
+        const originalGroundState = player.isOnGround;
+
+        // Force ground state change
+        player.isOnGround = !originalGroundState;
+        logMessage(
+          `Ground state changed: ${originalGroundState} -> ${player.isOnGround}`,
+          "info"
+        );
+
+        setTimeout(() => {
+          player.isOnGround = originalGroundState;
+          logMessage(`Ground state restored: ${player.isOnGround}`, "info");
+        }, 1000);
+
+        // Simulate velocity changes
+        const originalVelocity = { ...player.velocity };
+        player.velocity.y = -300; // Jump velocity
+
+        setTimeout(() => {
+          player.velocity = originalVelocity;
+          logMessage("Velocity simulation completed", "success");
+        }, 2000);
+      }
+
+      function getDebugStats() {
+        if (gameEngine && gameEngine.debugDisplaySystem) {
+          const stats = gameEngine.debugDisplaySystem.getDebugStats();
+          logMessage("Debug Statistics:", "info");
+          logMessage(JSON.stringify(stats, null, 2), "info");
+        } else {
+          logMessage("Debug display system not available", "warn");
+        }
+      }
+
+      function resetDebugData() {
+        if (gameEngine && gameEngine.debugDisplaySystem) {
+          gameEngine.debugDisplaySystem.reset();
+          logMessage("Debug data reset", "success");
+        } else {
+          logMessage("Debug display system not available", "warn");
+        }
+      }
+
+      function clearLog() {
+        document.getElementById("log-container").innerHTML = "";
+      }
+
+      function startStatusUpdates() {
+        if (testInterval) {
+          clearInterval(testInterval);
+        }
+
+        testInterval = setInterval(updateStatus, 1000);
+      }
+
+      function updateStatus() {
+        if (!gameEngine) return;
+
+        try {
+          // Debug display status
+          const debugVisible = document.getElementById("debug-visible");
+          const displayMode = document.getElementById("display-mode");
+
+          if (gameEngine.debugDisplaySystem) {
+            debugVisible.textContent = gameEngine.debugDisplaySystem.isVisible
+              ? "Visible"
+              : "Hidden";
+            displayMode.textContent = gameEngine.debugDisplaySystem.displayMode;
+          } else {
+            debugVisible.textContent = "Not Available";
+            displayMode.textContent = "N/A";
+          }
+
+          // Game state
+          const gameState = document.getElementById("game-state");
+          gameState.textContent = gameEngine.gameState
+            ? `${gameEngine.gameState.mode} (${
+                gameEngine.gameState.isRunning ? "running" : "stopped"
+              })`
+            : "Unknown";
+
+          // Player state
+          const playerState = document.getElementById("player-state");
+          if (gameEngine.player) {
+            playerState.textContent = `${gameEngine.player.state} (Ground: ${gameEngine.player.isOnGround})`;
+          } else {
+            playerState.textContent = "Not Available";
+          }
+
+          // Debug stats
+          if (gameEngine.debugDisplaySystem) {
+            const stats = gameEngine.debugDisplaySystem.getDebugStats();
+
+            document.getElementById(
+              "frame-data"
+            ).textContent = `${stats.frameDataCount} frames`;
+            document.getElementById("physics-events").textContent = `${
+              stats.physicsDataCount.groundStateHistory +
+              stats.physicsDataCount.collisionEvents
+            } events`;
+            document.getElementById("input-events").textContent = `${
+              stats.inputDataCount.keyEvents +
+              stats.inputDataCount.actionTriggers
+            } events`;
+            document.getElementById(
+              "jump-attempts"
+            ).textContent = `${stats.physicsDataCount.jumpAttempts} attempts`;
+          } else {
+            document.getElementById("frame-data").textContent = "N/A";
+            document.getElementById("physics-events").textContent = "N/A";
+            document.getElementById("input-events").textContent = "N/A";
+            document.getElementById("jump-attempts").textContent = "N/A";
+          }
+        } catch (error) {
+          logMessage(`Status update error: ${error.message}`, "error");
+        }
+      }
+
+      // Initialize when page loads
+      window.addEventListener("load", () => {
+        logMessage(
+          "Task 7 Enhanced Debug Display System Test loaded",
+          "success"
+        );
+        logMessage('Click "Start Game" to begin testing', "info");
+      });
+
+      // Handle keyboard events for testing
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "F1") {
+          event.preventDefault();
+          toggleDebugDisplay();
+        } else if (event.code === "F2") {
+          event.preventDefault();
+          cycleDisplayMode();
+        }
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        if (testInterval) {
+          clearInterval(testInterval);
+        }
+        if (gameEngine) {
+          gameEngine.stop();
+        }
+      });
+    </script>
+  </body>
+</html>

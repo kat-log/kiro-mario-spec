@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alternative Jump Keys Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .test-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-section {
+        margin-bottom: 30px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+
+      .test-section h3 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .key-test {
+        display: inline-block;
+        margin: 5px;
+        padding: 10px 15px;
+        background: #e9e9e9;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        font-family: monospace;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .key-test.pressed {
+        background: #4caf50;
+        color: white;
+        border-color: #45a049;
+      }
+
+      .key-test.triggered {
+        background: #ff9800;
+        color: white;
+        border-color: #f57c00;
+      }
+
+      .log-container {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+
+      .log-entry {
+        margin: 2px 0;
+        padding: 2px 5px;
+      }
+
+      .log-entry.success {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .log-entry.warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .log-entry.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+      }
+
+      .stat-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .controls {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        margin: 0 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn:hover {
+        opacity: 0.8;
+      }
+
+      .duplicate-prevention {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .duplicate-prevention h4 {
+        margin-top: 0;
+        color: #1976d2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-container">
+      <h1>Alternative Jump Keys Test</h1>
+      <p>
+        このテストでは、代替ジャンプキー（上矢印、W、Enter）の動作を検証し、重複実行防止機能をテストします。
+      </p>
+
+      <div class="controls">
+        <button class="btn btn-primary" onclick="startTest()">
+          テスト開始
+        </button>
+        <button class="btn btn-secondary" onclick="clearLogs()">
+          ログクリア
+        </button>
+        <button class="btn btn-secondary" onclick="resetStats()">
+          統計リセット
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>キー入力状態</h3>
+        <div class="key-test" id="key-space">Space</div>
+        <div class="key-test" id="key-arrowup">↑ Arrow</div>
+        <div class="key-test" id="key-keyw">W</div>
+        <div class="key-test" id="key-enter">Enter</div>
+        <p>
+          <small
+            >すべてのキーでジャンプが実行されることを確認してください</small
+          >
+        </p>
+      </div>
+
+      <div class="test-section">
+        <h3>ジャンプアクション状態</h3>
+        <div class="key-test" id="action-jump">Jump Action</div>
+        <div class="key-test" id="action-duplicate">Duplicate Detected</div>
+      </div>
+
+      <div class="duplicate-prevention">
+        <h4>重複実行防止テスト</h4>
+        <p>
+          複数のジャンプキーを同時に押して、重複実行が防止されることを確認してください。
+        </p>
+        <div id="duplicate-test-status">待機中...</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="total-inputs">0</div>
+          <div class="stat-label">総入力数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="jump-triggers">0</div>
+          <div class="stat-label">ジャンプ実行数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="duplicate-prevented">0</div>
+          <div class="stat-label">重複防止数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="success-rate">0%</div>
+          <div class="stat-label">成功率</div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>テストログ</h3>
+        <div class="log-container" id="log-container"></div>
+      </div>
+    </div>
+
+    <!-- Include game scripts -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+
+    <script>
+      class AlternativeJumpKeysTest {
+        constructor() {
+          this.inputManager = null;
+          this.player = null;
+          this.physicsEngine = null;
+          this.jumpDiagnosticSystem = null;
+
+          this.stats = {
+            totalInputs: 0,
+            jumpTriggers: 0,
+            duplicatePrevented: 0,
+            keyPressHistory: [],
+            simultaneousKeyPresses: [],
+          };
+
+          this.isTestRunning = false;
+          this.lastJumpTime = 0;
+          this.duplicateThreshold = 50; // ms
+          this.activeKeys = new Set();
+
+          this.init();
+        }
+
+        init() {
+          // Create canvas for input manager
+          const canvas = document.createElement("canvas");
+          canvas.width = 800;
+          canvas.height = 600;
+          canvas.style.display = "none";
+          document.body.appendChild(canvas);
+
+          // Initialize systems
+          this.inputManager = new InputManager(canvas);
+          this.physicsEngine = new PhysicsEngine();
+          this.player = new Player(100, 100);
+          this.jumpDiagnosticSystem = new JumpDiagnosticSystem(
+            this.player,
+            this.inputManager
+          );
+
+          this.player.setJumpDiagnosticSystem(this.jumpDiagnosticSystem);
+
+          // Set up event listeners
+          this.setupEventListeners();
+
+          this.log("システム初期化完了", "success");
+        }
+
+        setupEventListeners() {
+          // Override input manager's key handling to capture our test data
+          const originalHandleKeyDown =
+            this.inputManager.handleKeyDownEnhanced.bind(this.inputManager);
+          const originalHandleKeyUp =
+            this.inputManager.handleKeyUpEnhanced.bind(this.inputManager);
+
+          this.inputManager.handleKeyDownEnhanced = (event) => {
+            this.handleTestKeyDown(event);
+            return originalHandleKeyDown(event);
+          };
+
+          this.inputManager.handleKeyUpEnhanced = (event) => {
+            this.handleTestKeyUp(event);
+            return originalHandleKeyUp(event);
+          };
+
+          // Start update loop
+          this.startUpdateLoop();
+        }
+
+        handleTestKeyDown(event) {
+          const keyCode = event.code;
+          const timestamp = performance.now();
+
+          if (this.isJumpKey(keyCode)) {
+            this.stats.totalInputs++;
+            this.activeKeys.add(keyCode);
+
+            // Update visual state
+            this.updateKeyVisual(keyCode, true);
+
+            // Record key press
+            this.stats.keyPressHistory.push({
+              key: keyCode,
+              timestamp: timestamp,
+              type: "keydown",
+            });
+
+            // Check for simultaneous key presses
+            this.checkSimultaneousKeys(timestamp);
+
+            this.log(`キー押下: ${this.getKeyDisplayName(keyCode)}`, "success");
+          }
+        }
+
+        handleTestKeyUp(event) {
+          const keyCode = event.code;
+          const timestamp = performance.now();
+
+          if (this.isJumpKey(keyCode)) {
+            this.activeKeys.delete(keyCode);
+
+            // Update visual state
+            this.updateKeyVisual(keyCode, false);
+
+            // Record key release
+            this.stats.keyPressHistory.push({
+              key: keyCode,
+              timestamp: timestamp,
+              type: "keyup",
+            });
+
+            this.log(`キー離上: ${this.getKeyDisplayName(keyCode)}`, "success");
+          }
+        }
+
+        checkSimultaneousKeys(timestamp) {
+          if (this.activeKeys.size > 1) {
+            const simultaneousKeys = Array.from(this.activeKeys);
+            this.stats.simultaneousKeyPresses.push({
+              keys: simultaneousKeys,
+              timestamp: timestamp,
+            });
+
+            this.log(
+              `同時押し検出: ${simultaneousKeys
+                .map((k) => this.getKeyDisplayName(k))
+                .join(", ")}`,
+              "warning"
+            );
+
+            // Update duplicate detection visual
+            document
+              .getElementById("action-duplicate")
+              .classList.add("triggered");
+            setTimeout(() => {
+              document
+                .getElementById("action-duplicate")
+                .classList.remove("triggered");
+            }, 200);
+          }
+        }
+
+        startUpdateLoop() {
+          const update = () => {
+            if (this.isTestRunning) {
+              this.inputManager.update();
+
+              const inputState = this.inputManager.getPlayerInput();
+
+              // Check for jump action
+              if (inputState.jump) {
+                this.handleJumpAction();
+              }
+
+              // Update action visual
+              document
+                .getElementById("action-jump")
+                .classList.toggle("triggered", inputState.jump);
+
+              this.updateStats();
+            }
+
+            requestAnimationFrame(update);
+          };
+
+          update();
+        }
+
+        handleJumpAction() {
+          const currentTime = performance.now();
+          const timeSinceLastJump = currentTime - this.lastJumpTime;
+
+          if (timeSinceLastJump < this.duplicateThreshold) {
+            this.stats.duplicatePrevented++;
+            this.log(
+              `重複ジャンプ防止 (${timeSinceLastJump.toFixed(1)}ms間隔)`,
+              "warning"
+            );
+            return;
+          }
+
+          this.stats.jumpTriggers++;
+          this.lastJumpTime = currentTime;
+
+          // Determine which key triggered the jump
+          const triggeringKeys = Array.from(this.activeKeys);
+          const keyNames = triggeringKeys
+            .map((k) => this.getKeyDisplayName(k))
+            .join(", ");
+
+          this.log(`ジャンプ実行: ${keyNames}`, "success");
+
+          // Test duplicate prevention status
+          this.updateDuplicateTestStatus(triggeringKeys);
+        }
+
+        updateDuplicateTestStatus(triggeringKeys) {
+          const statusElement = document.getElementById(
+            "duplicate-test-status"
+          );
+
+          if (triggeringKeys.length > 1) {
+            statusElement.textContent = `複数キー同時押し検出: ${triggeringKeys
+              .map((k) => this.getKeyDisplayName(k))
+              .join(", ")} - 重複防止機能テスト中`;
+            statusElement.style.color = "#f57c00";
+          } else {
+            statusElement.textContent = `単一キー入力: ${this.getKeyDisplayName(
+              triggeringKeys[0]
+            )} - 正常動作`;
+            statusElement.style.color = "#4caf50";
+          }
+        }
+
+        isJumpKey(keyCode) {
+          const jumpKeys = this.inputManager.keyBindings.jump || [];
+          return jumpKeys.includes(keyCode);
+        }
+
+        getKeyDisplayName(keyCode) {
+          const keyNames = {
+            Space: "Space",
+            ArrowUp: "↑",
+            KeyW: "W",
+            Enter: "Enter",
+          };
+          return keyNames[keyCode] || keyCode;
+        }
+
+        updateKeyVisual(keyCode, pressed) {
+          const keyMap = {
+            Space: "key-space",
+            ArrowUp: "key-arrowup",
+            KeyW: "key-keyw",
+            Enter: "key-enter",
+          };
+
+          const elementId = keyMap[keyCode];
+          if (elementId) {
+            const element = document.getElementById(elementId);
+            if (pressed) {
+              element.classList.add("pressed");
+            } else {
+              element.classList.remove("pressed");
+            }
+          }
+        }
+
+        updateStats() {
+          document.getElementById("total-inputs").textContent =
+            this.stats.totalInputs;
+          document.getElementById("jump-triggers").textContent =
+            this.stats.jumpTriggers;
+          document.getElementById("duplicate-prevented").textContent =
+            this.stats.duplicatePrevented;
+
+          const successRate =
+            this.stats.totalInputs > 0
+              ? (
+                  (this.stats.jumpTriggers / this.stats.totalInputs) *
+                  100
+                ).toFixed(1)
+              : 0;
+          document.getElementById("success-rate").textContent =
+            successRate + "%";
+        }
+
+        log(message, type = "info") {
+          const logContainer = document.getElementById("log-container");
+          const logEntry = document.createElement("div");
+          logEntry.className = `log-entry ${type}`;
+
+          const timestamp = new Date().toLocaleTimeString();
+          logEntry.textContent = `[${timestamp}] ${message}`;
+
+          logContainer.appendChild(logEntry);
+          logContainer.scrollTop = logContainer.scrollHeight;
+
+          // Keep log size manageable
+          while (logContainer.children.length > 100) {
+            logContainer.removeChild(logContainer.firstChild);
+          }
+        }
+
+        startTest() {
+          this.isTestRunning = true;
+          this.log("代替ジャンプキーテスト開始", "success");
+          this.log("Space、↑、W、Enterキーを押してテストしてください", "info");
+        }
+
+        clearLogs() {
+          document.getElementById("log-container").innerHTML = "";
+          this.log("ログクリア完了", "info");
+        }
+
+        resetStats() {
+          this.stats = {
+            totalInputs: 0,
+            jumpTriggers: 0,
+            duplicatePrevented: 0,
+            keyPressHistory: [],
+            simultaneousKeyPresses: [],
+          };
+
+          this.lastJumpTime = 0;
+          this.activeKeys.clear();
+
+          this.updateStats();
+          this.log("統計リセット完了", "info");
+        }
+
+        generateReport() {
+          const report = {
+            timestamp: new Date().toISOString(),
+            stats: { ...this.stats },
+            keyBindings: this.inputManager.keyBindings.jump,
+            simultaneousKeyPresses: this.stats.simultaneousKeyPresses,
+            duplicatePreventionRate:
+              this.stats.totalInputs > 0
+                ? (
+                    (this.stats.duplicatePrevented / this.stats.totalInputs) *
+                    100
+                  ).toFixed(2)
+                : 0,
+          };
+
+          console.log("Alternative Jump Keys Test Report:", report);
+          return report;
+        }
+      }
+
+      // Global functions for buttons
+      let testInstance;
+
+      function startTest() {
+        if (!testInstance) {
+          testInstance = new AlternativeJumpKeysTest();
+        }
+        testInstance.startTest();
+      }
+
+      function clearLogs() {
+        if (testInstance) {
+          testInstance.clearLogs();
+        }
+      }
+
+      function resetStats() {
+        if (testInstance) {
+          testInstance.resetStats();
+        }
+      }
+
+      // Initialize test when page loads
+      window.addEventListener("load", () => {
+        console.log("Alternative Jump Keys Test page loaded");
+      });
+    </script>
+  </body>
+</html>

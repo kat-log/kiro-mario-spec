@@ -25,18 +25,22 @@ class InputManager {
       // Movement controls
       moveLeft: ["ArrowLeft", "KeyA"],
       moveRight: ["ArrowRight", "KeyD"],
-      jump: ["Space", "ArrowUp", "KeyW"],
+      jump: ["Space", "ArrowUp", "KeyW", "Enter"], // Added Enter key for jump
       dash: ["ShiftLeft", "ShiftRight"],
       block: ["ArrowDown", "KeyS"],
 
       // Game controls
       pause: ["KeyP"],
       escape: ["Escape"],
-      enter: ["Enter"],
 
       // Debug controls (for development)
       debug: ["KeyF1"],
     };
+
+    // Duplicate execution prevention
+    this.actionExecutionHistory = new Map(); // Track recent action executions
+    this.duplicateActionThreshold = 50; // ms threshold for duplicate action prevention
+    this.lastActionTrigger = new Map(); // Track last trigger time for each action
 
     // Action states (derived from key states)
     this.actionStates = new Map();
@@ -387,21 +391,56 @@ class InputManager {
   }
 
   /**
-   * Check if an action was just triggered this frame
+   * Check if an action was just triggered this frame with duplicate prevention
    */
   isActionPressed(action) {
     const keys = this.keyBindings[action] || [];
+    const currentTime = performance.now();
 
+    // Check if any bound key was pressed
+    let triggeringKey = null;
     for (const key of keys) {
       if (this.isKeyPressed(key)) {
-        if (action === "jump") {
-          console.log(`Jump action triggered by key: ${key}`); // デバッグログ追加
-        }
-        return true;
+        triggeringKey = key;
+        break;
       }
     }
 
-    return false;
+    if (!triggeringKey) {
+      return false;
+    }
+
+    // Duplicate execution prevention for jump action
+    if (action === "jump") {
+      const lastTriggerTime = this.lastActionTrigger.get(action) || 0;
+      const timeSinceLastTrigger = currentTime - lastTriggerTime;
+
+      if (timeSinceLastTrigger < this.duplicateActionThreshold) {
+        console.log(
+          `[INPUT] Duplicate ${action} action prevented (${timeSinceLastTrigger.toFixed(
+            1
+          )}ms since last trigger, threshold: ${
+            this.duplicateActionThreshold
+          }ms)`
+        );
+        return false;
+      }
+
+      // Record this action execution
+      this.lastActionTrigger.set(action, currentTime);
+
+      // Enhanced logging for jump action
+      console.log(
+        `[INPUT] ${action} action triggered by key: ${triggeringKey} at ${currentTime.toFixed(
+          2
+        )}ms`
+      );
+
+      // Record in execution history
+      this.recordActionExecution(action, triggeringKey, currentTime);
+    }
+
+    return true;
   }
 
   /**
@@ -446,6 +485,64 @@ class InputManager {
   }
 
   /**
+   * Record action execution for duplicate prevention and analysis
+   */
+  recordActionExecution(action, triggeringKey, timestamp) {
+    if (!this.actionExecutionHistory.has(action)) {
+      this.actionExecutionHistory.set(action, []);
+    }
+
+    const history = this.actionExecutionHistory.get(action);
+    history.push({
+      key: triggeringKey,
+      timestamp: timestamp,
+      frameId: this.eventSequenceId,
+    });
+
+    // Keep history size manageable (last 50 executions)
+    if (history.length > 50) {
+      history.shift();
+    }
+  }
+
+  /**
+   * Get action execution statistics
+   */
+  getActionExecutionStats(action) {
+    const history = this.actionExecutionHistory.get(action) || [];
+    const recentHistory = history.filter(
+      (entry) => performance.now() - entry.timestamp < 5000 // Last 5 seconds
+    );
+
+    const keyUsage = {};
+    recentHistory.forEach((entry) => {
+      keyUsage[entry.key] = (keyUsage[entry.key] || 0) + 1;
+    });
+
+    return {
+      totalExecutions: history.length,
+      recentExecutions: recentHistory.length,
+      keyUsageDistribution: keyUsage,
+      averageInterval: this.calculateAverageInterval(recentHistory),
+      lastExecution: history[history.length - 1] || null,
+    };
+  }
+
+  /**
+   * Calculate average interval between action executions
+   */
+  calculateAverageInterval(history) {
+    if (history.length < 2) return 0;
+
+    let totalInterval = 0;
+    for (let i = 1; i < history.length; i++) {
+      totalInterval += history[i].timestamp - history[i - 1].timestamp;
+    }
+
+    return totalInterval / (history.length - 1);
+  }
+
+  /**
    * Bind a key to an action
    */
   bindKey(keyCode, action) {
@@ -455,7 +552,10 @@ class InputManager {
 
     if (!this.keyBindings[action].includes(keyCode)) {
       this.keyBindings[action].push(keyCode);
-      console.log(`Bound key ${keyCode} to action ${action}`);
+      console.log(`[INPUT] Bound key ${keyCode} to action ${action}`);
+
+      // Clear action execution history when bindings change
+      this.actionExecutionHistory.delete(action);
     }
   }
 
@@ -467,9 +567,103 @@ class InputManager {
       const index = this.keyBindings[action].indexOf(keyCode);
       if (index > -1) {
         this.keyBindings[action].splice(index, 1);
-        console.log(`Unbound key ${keyCode} from action ${action}`);
+        console.log(`[INPUT] Unbound key ${keyCode} from action ${action}`);
+
+        // Clear action execution history when bindings change
+        this.actionExecutionHistory.delete(action);
       }
     }
+  }
+
+  /**
+   * Set key bindings for an action (replaces all existing bindings)
+   */
+  setKeyBindings(action, keyCodes) {
+    if (!Array.isArray(keyCodes)) {
+      keyCodes = [keyCodes];
+    }
+
+    this.keyBindings[action] = [...keyCodes];
+    console.log(`[INPUT] Set key bindings for ${action}:`, keyCodes);
+
+    // Clear action execution history when bindings change
+    this.actionExecutionHistory.delete(action);
+  }
+
+  /**
+   * Get current key bindings for an action
+   */
+  getKeyBindings(action) {
+    return [...(this.keyBindings[action] || [])];
+  }
+
+  /**
+   * Get all key bindings
+   */
+  getAllKeyBindings() {
+    const bindings = {};
+    for (const action in this.keyBindings) {
+      bindings[action] = [...this.keyBindings[action]];
+    }
+    return bindings;
+  }
+
+  /**
+   * Reset key bindings to default configuration
+   */
+  resetKeyBindingsToDefault() {
+    this.keyBindings = {
+      // Movement controls
+      moveLeft: ["ArrowLeft", "KeyA"],
+      moveRight: ["ArrowRight", "KeyD"],
+      jump: ["Space", "ArrowUp", "KeyW", "Enter"],
+      dash: ["ShiftLeft", "ShiftRight"],
+      block: ["ArrowDown", "KeyS"],
+
+      // Game controls
+      pause: ["KeyP"],
+      escape: ["Escape"],
+
+      // Debug controls (for development)
+      debug: ["KeyF1"],
+    };
+
+    // Clear all action execution history
+    this.actionExecutionHistory.clear();
+    this.lastActionTrigger.clear();
+
+    console.log("[INPUT] Key bindings reset to default configuration");
+  }
+
+  /**
+   * Validate key binding configuration
+   */
+  validateKeyBindings() {
+    const issues = [];
+    const usedKeys = new Set();
+
+    for (const action in this.keyBindings) {
+      const keys = this.keyBindings[action];
+
+      if (!Array.isArray(keys) || keys.length === 0) {
+        issues.push(`Action '${action}' has no key bindings`);
+        continue;
+      }
+
+      for (const key of keys) {
+        if (usedKeys.has(key)) {
+          issues.push(`Key '${key}' is bound to multiple actions`);
+        }
+        usedKeys.add(key);
+      }
+    }
+
+    return {
+      isValid: issues.length === 0,
+      issues: issues,
+      totalKeys: usedKeys.size,
+      totalActions: Object.keys(this.keyBindings).length,
+    };
   }
 
   /**
@@ -574,7 +768,29 @@ class InputManager {
       lastEventTimes: Object.fromEntries(this.lastKeyEventTime),
       recentEvents: this.getEventHistory(null, 5), // Last 5 events
       eventCaptureOptions: this.eventCaptureOptions,
+      // Alternative jump keys and duplicate prevention debug info
+      duplicateActionThreshold: this.duplicateActionThreshold,
+      lastActionTriggers: Object.fromEntries(this.lastActionTrigger),
+      actionExecutionHistory: this.getActionExecutionHistorySummary(),
+      keyBindingValidation: this.validateKeyBindings(),
     };
+  }
+
+  /**
+   * Get summary of action execution history for debugging
+   */
+  getActionExecutionHistorySummary() {
+    const summary = {};
+    for (const [action, history] of this.actionExecutionHistory) {
+      summary[action] = {
+        totalExecutions: history.length,
+        recentExecutions: history.filter(
+          (entry) => performance.now() - entry.timestamp < 1000
+        ).length,
+        lastExecution: history[history.length - 1] || null,
+      };
+    }
+    return summary;
   }
 
   /**
@@ -588,10 +804,58 @@ class InputManager {
   }
 
   /**
-   * Test space key input detection (for debugging)
+   * Test alternative jump keys detection (for debugging)
+   */
+  testAlternativeJumpKeys() {
+    console.log("=== Alternative Jump Keys Detection Test ===");
+
+    const jumpKeys = this.keyBindings.jump || [];
+    console.log("Configured jump keys:", jumpKeys);
+
+    const keyStates = {};
+    const keyEvents = {};
+
+    jumpKeys.forEach((key) => {
+      keyStates[key] = this.keyStates.get(key) || false;
+      keyEvents[key] = {
+        recent: this.getEventHistory(key, 5),
+        lastDown: this.lastKeyEventTime.get(key + "_keydown"),
+        lastUp: this.lastKeyEventTime.get(key + "_keyup"),
+      };
+    });
+
+    const jumpActionStats = this.getActionExecutionStats("jump");
+
+    console.log("Jump action state:", this.actionStates.get("jump"));
+    console.log("Key states:", keyStates);
+    console.log("Jump action statistics:", jumpActionStats);
+    console.log("Focus state:", this.getFocusState());
+    console.log(
+      "Duplicate prevention threshold:",
+      this.duplicateActionThreshold
+    );
+
+    return {
+      configuredJumpKeys: jumpKeys,
+      keyStates: keyStates,
+      keyEvents: keyEvents,
+      jumpActionActive: this.actionStates.get("jump"),
+      jumpActionStats: jumpActionStats,
+      focusState: this.getFocusState(),
+      duplicatePreventionEnabled: this.duplicateActionThreshold > 0,
+      lastActionTrigger: this.lastActionTrigger.get("jump") || 0,
+    };
+  }
+
+  /**
+   * Test space key input detection (for debugging) - Legacy method
    */
   testSpaceKeyDetection() {
-    console.log("=== Space Key Detection Test ===");
+    console.log("=== Space Key Detection Test (Legacy) ===");
+    console.log(
+      "Note: Use testAlternativeJumpKeys() for comprehensive jump key testing"
+    );
+
     console.log("Current space key state:", this.keyStates.get("Space"));
     console.log("Jump action state:", this.actionStates.get("jump"));
     console.log("Focus state:", this.getFocusState());

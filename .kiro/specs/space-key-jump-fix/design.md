@@ -2,159 +2,287 @@
 
 ## Overview
 
-スペースキーのジャンプ機能修正は、既存のマリオスタイルプラットフォーマーゲームの入力システムを強化し、確実なスペースキー検出とジャンプ実行を保証するための設計です。問題の根本原因を特定し、段階的な診断機能を実装して、ブラウザ互換性とアクセシビリティを向上させます。
+ジャンプ機能修正は、現在のマリオスタイルプラットフォーマーゲームで発生している「キー入力は検出されるがジャンプが実行されない」問題を解決するための設計です。調査により、問題の根本原因は以下の通り特定されました：
+
+1. **地面判定の問題**: `isOnGround` 状態が物理エンジンの更新で不正確にリセットされる
+2. **更新順序の問題**: 地面判定がジャンプ実行前に誤ってリセットされる
+3. **ジャンプ条件の問題**: 地面にいてもジャンプ条件検証が失敗する
+4. **物理エンジンの衝突解決**: 地面との衝突解決が不完全
+
+この設計では、これらの具体的な問題に対する段階的な修正アプローチを提供します。
 
 ## Architecture
 
-### 問題分析アーキテクチャ
+### 現在の問題フロー
 
 ```mermaid
 graph TB
-    A[Browser Event] --> B[Event Capture Layer]
-    B --> C[Input Manager]
-    C --> D[Action Mapping]
-    D --> E[Player Controller]
-    E --> F[Jump Execution]
+    A[Space Key Press] --> B[InputManager detects]
+    B --> C[Action: jump = true]
+    C --> D[Player.handleInput]
+    D --> E[Player.jump called]
+    E --> F{isOnGround check}
+    F -->|false| G[Jump BLOCKED]
+    F -->|true| H[Jump executed]
 
-    G[Diagnostic System] --> B
-    G --> C
-    G --> D
-    G --> E
-    G --> F
+    I[Physics Update] --> J[Reset isOnGround = false]
+    J --> K[Apply Gravity]
+    K --> L[Update Position]
+    L --> M[Check Collisions]
+    M --> N[Set isOnGround = true]
 
-    H[Focus Manager] --> B
-    I[Compatibility Layer] --> B
-    J[Fallback System] --> D
+    style G fill:#ff9999
+    style F fill:#ffcc99
+```
+
+### 修正後のフロー
+
+```mermaid
+graph TB
+    A[Space Key Press] --> B[InputManager detects]
+    B --> C[Action: jump = true]
+    C --> D[Player.handleInput]
+    D --> E[Player.jump called]
+    E --> F{Enhanced Ground Check}
+    F -->|true| G[Jump executed]
+    F -->|false| H[Log detailed reason]
+
+    I[Physics Update] --> J[Store previous ground state]
+    J --> K[Apply Gravity]
+    K --> L[Update Position]
+    L --> M[Enhanced Collision Detection]
+    M --> N[Update isOnGround with validation]
+
+    style G fill:#99ff99
+    style F fill:#99ccff
+    style N fill:#99ccff
 ```
 
 ### 修正対象システム
 
-1. **Event Capture Layer**: ブラウザイベントの確実な捕捉
-2. **Input Manager**: キー状態管理とアクション変換
-3. **Focus Management**: Canvas フォーカス制御
-4. **Diagnostic System**: リアルタイム診断とデバッグ
-5. **Fallback System**: 代替入力手段の提供
+1. **Player Ground Detection**: 地面判定ロジックの強化
+2. **Physics Engine Update Order**: 更新順序の最適化
+3. **Collision Resolution**: 衝突解決の改善
+4. **Jump Validation**: ジャンプ条件検証の寛容化
+5. **Debug System**: 詳細な診断機能の追加
 
 ## Components and Interfaces
 
-### Enhanced Input Manager
+### Enhanced Player Ground Detection
 
 ```javascript
-class EnhancedInputManager extends InputManager {
+class Player {
   constructor() {
-    super();
-    this.diagnosticMode = false;
-    this.inputHistory = [];
-    this.focusManager = new FocusManager();
-    this.compatibilityLayer = new CompatibilityLayer();
+    // 既存のプロパティ...
+    this.groundDetectionHistory = []; // 地面判定の履歴
+    this.lastGroundContact = 0; // 最後に地面に接触した時間
+    this.groundTolerance = 5; // 地面判定の許容範囲（ピクセル）
   }
 
-  // 診断機能
-  enableDiagnostics()
-  disableDiagnostics()
-  getInputDiagnostics()
+  // 強化された地面判定
+  enhancedGroundCheck() {
+    // 複数の方法で地面判定を実行
+    const physicsGroundCheck = this.isOnGround;
+    const positionGroundCheck = this.checkGroundByPosition();
+    const velocityGroundCheck = this.checkGroundByVelocity();
 
-  // 強化されたイベント処理
-  handleKeyDownEnhanced(event)
-  handleKeyUpEnhanced(event)
+    return {
+      isOnGround: physicsGroundCheck || positionGroundCheck,
+      confidence: this.calculateGroundConfidence(),
+      details: { physicsGroundCheck, positionGroundCheck, velocityGroundCheck },
+    };
+  }
 
-  // フォーカス管理
-  ensureFocus()
-  handleFocusLoss()
+  // 寛容なジャンプ条件検証
+  canJumpEnhanced() {
+    const groundCheck = this.enhancedGroundCheck();
+    const timeSinceGroundContact = performance.now() - this.lastGroundContact;
 
-  // 互換性処理
-  normalizeKeyEvent(event)
-  detectBrowserQuirks()
+    // 地面にいるか、最近地面にいた場合はジャンプ可能
+    return groundCheck.isOnGround || timeSinceGroundContact < 100; // 100ms の猶予
+  }
 }
 ```
 
-### Focus Manager
+### Enhanced Physics Engine
 
 ```javascript
-class FocusManager {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.hasFocus = false;
-    this.focusIndicator = null;
+class PhysicsEngine {
+  // 既存のメソッド...
+
+  // 強化された衝突解決
+  resolveCollisionEnhanced(entityA, entityB) {
+    const resolution = this.resolveCollision(entityA, entityB);
+
+    // 地面衝突の場合、追加の検証を実行
+    if (resolution.direction === "bottom") {
+      this.validateGroundCollision(entityA, entityB, resolution);
+      this.recordGroundContact(entityA);
+    }
+
+    return resolution;
   }
 
-  // フォーカス制御
-  ensureCanvasFocus()
-  handleFocusChange()
-  showFocusIndicator()
-  hideFocusIndicator()
+  // 地面衝突の検証
+  validateGroundCollision(entity, platform, resolution) {
+    // 衝突解決が妥当かチェック
+    const isValidGroundCollision =
+      entity.velocity.y >= 0 && // 下向きまたは静止
+      resolution.overlap.y > 0 && // 実際に重なっている
+      resolution.overlap.y < entity.size.height; // 重なりが妥当な範囲
 
-  // イベント管理
-  setupFocusListeners()
-  handleWindowBlur()
-  handleWindowFocus()
+    if (!isValidGroundCollision) {
+      console.warn("Invalid ground collision detected", {
+        entity: entity.position,
+        velocity: entity.velocity,
+        overlap: resolution.overlap,
+      });
+    }
+
+    return isValidGroundCollision;
+  }
+
+  // 地面接触の記録
+  recordGroundContact(entity) {
+    if (entity.lastGroundContact !== undefined) {
+      entity.lastGroundContact = performance.now();
+    }
+  }
 }
 ```
 
-### Diagnostic System
+### Jump Diagnostic System
 
 ```javascript
-class InputDiagnosticSystem {
-  constructor(inputManager) {
+class JumpDiagnosticSystem {
+  constructor(player, inputManager) {
+    this.player = player;
     this.inputManager = inputManager;
-    this.diagnosticData = new Map();
+    this.jumpAttempts = [];
     this.isRecording = false;
   }
 
-  // 診断機能
-  startDiagnostics()
-  stopDiagnostics()
-  recordInputEvent(event, stage, result)
-  generateDiagnosticReport()
+  // ジャンプ試行の記録
+  recordJumpAttempt(inputDetected, groundState, jumpExecuted, reason) {
+    const attempt = {
+      timestamp: performance.now(),
+      inputDetected,
+      groundState: { ...groundState },
+      jumpExecuted,
+      reason,
+      playerState: {
+        position: { ...this.player.position },
+        velocity: { ...this.player.velocity },
+        isOnGround: this.player.isOnGround,
+      },
+    };
 
-  // テスト機能
-  simulateSpaceKeyPress()
-  testJumpSequence()
-  validateInputChain()
+    this.jumpAttempts.push(attempt);
+
+    // 最新の100回のみ保持
+    if (this.jumpAttempts.length > 100) {
+      this.jumpAttempts.shift();
+    }
+  }
+
+  // 診断レポートの生成
+  generateJumpDiagnosticReport() {
+    const recent = this.jumpAttempts.slice(-10);
+    const successful = recent.filter((a) => a.jumpExecuted);
+    const failed = recent.filter((a) => !a.jumpExecuted);
+
+    return {
+      totalAttempts: recent.length,
+      successfulJumps: successful.length,
+      failedJumps: failed.length,
+      successRate: successful.length / recent.length,
+      commonFailureReasons: this.analyzeFailureReasons(failed),
+      recommendations: this.generateRecommendations(failed),
+    };
+  }
 }
 ```
 
-### Compatibility Layer
+### Enhanced Game Engine Update Loop
 
 ```javascript
-class CompatibilityLayer {
-  constructor() {
-    this.browserInfo = this.detectBrowser();
-    this.quirks = this.loadBrowserQuirks();
+class GameEngine {
+  // 修正された物理更新順序
+  updatePhysics(deltaTime) {
+    if (!this.player || !this.currentStage) return;
+
+    // 1. 入力処理前の状態を保存
+    const preUpdateState = {
+      position: { ...this.player.position },
+      velocity: { ...this.player.velocity },
+      isOnGround: this.player.isOnGround,
+    };
+
+    // 2. 重力と摩擦を適用（地面状態は保持）
+    this.physicsEngine.applyGravity(this.player, deltaTime);
+    this.physicsEngine.applyFriction(
+      this.player,
+      deltaTime,
+      this.player.isOnGround
+    );
+
+    // 3. 位置を更新
+    this.physicsEngine.updatePosition(this.player, deltaTime);
+
+    // 4. 衝突検出と解決
+    const collisions = this.currentStage.checkPlatformCollisions(
+      this.player,
+      this.physicsEngine
+    );
+
+    // 5. 地面判定を更新（より寛容なロジック）
+    this.updateGroundStateEnhanced(collisions, preUpdateState);
+
+    // 6. 境界チェック
+    this.enforceStagesBounds();
   }
 
-  // ブラウザ検出
-  detectBrowser()
-  loadBrowserQuirks()
+  // 強化された地面状態更新
+  updateGroundStateEnhanced(collisions, preUpdateState) {
+    let newGroundState = false;
 
-  // イベント正規化
-  normalizeKeyEvent(event)
-  applyBrowserFixes(event)
+    // 衝突による地面判定
+    for (const collision of collisions) {
+      if (
+        collision.resolution.resolved &&
+        collision.resolution.direction === "bottom"
+      ) {
+        newGroundState = true;
+        this.player.lastGroundContact = performance.now();
+        break;
+      }
+    }
 
-  // 代替手段
-  setupTouchControls()
-  setupOnScreenControls()
-}
-```
+    // 境界による地面判定
+    const stageBounds = this.currentStage.getBounds();
+    if (
+      this.player.position.y + this.player.size.height >=
+      stageBounds.bottom
+    ) {
+      newGroundState = true;
+      this.player.lastGroundContact = performance.now();
+    }
 
-### Fallback Input System
+    // 地面状態の変更をログ出力
+    if (this.player.isOnGround !== newGroundState) {
+      console.log(
+        `[PHYSICS] Ground state changed: ${this.player.isOnGround} -> ${newGroundState}`,
+        {
+          collisions: collisions.length,
+          playerBottom: this.player.position.y + this.player.size.height,
+          stageBottom: stageBounds.bottom,
+          velocity: { ...this.player.velocity },
+        }
+      );
+    }
 
-```javascript
-class FallbackInputSystem {
-  constructor(gameEngine) {
-    this.gameEngine = gameEngine;
-    this.onScreenControls = null;
-    this.touchHandler = null;
+    this.player.isOnGround = newGroundState;
   }
-
-  // 代替入力
-  createOnScreenControls()
-  setupTouchHandlers()
-  setupAlternativeKeys()
-
-  // 統合
-  integrateWithInputManager()
-  handleFallbackInput(action)
 }
 ```
 

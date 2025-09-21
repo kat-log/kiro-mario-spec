@@ -37,9 +37,9 @@ class InputManager {
       debug: ["KeyF1"],
     };
 
-    // Duplicate execution prevention
+    // Duplicate execution prevention (REDUCED THRESHOLD FOR DEBUGGING)
     this.actionExecutionHistory = new Map(); // Track recent action executions
-    this.duplicateActionThreshold = 50; // ms threshold for duplicate action prevention
+    this.duplicateActionThreshold = 10; // ms threshold for duplicate action prevention (reduced from 50)
     this.lastActionTrigger = new Map(); // Track last trigger time for each action
 
     // Action states (derived from key states)
@@ -410,21 +410,22 @@ class InputManager {
       return false;
     }
 
-    // Duplicate execution prevention for jump action
+    // Duplicate execution prevention for jump action (DISABLED FOR DEBUGGING)
     if (action === "jump") {
       const lastTriggerTime = this.lastActionTrigger.get(action) || 0;
       const timeSinceLastTrigger = currentTime - lastTriggerTime;
 
-      if (timeSinceLastTrigger < this.duplicateActionThreshold) {
-        console.log(
-          `[INPUT] Duplicate ${action} action prevented (${timeSinceLastTrigger.toFixed(
-            1
-          )}ms since last trigger, threshold: ${
-            this.duplicateActionThreshold
-          }ms)`
-        );
-        return false;
-      }
+      // TEMPORARILY DISABLE duplicate prevention to fix jump issue
+      // if (timeSinceLastTrigger < this.duplicateActionThreshold) {
+      //   console.log(
+      //     `[INPUT] Duplicate ${action} action prevented (${timeSinceLastTrigger.toFixed(
+      //       1
+      //     )}ms since last trigger, threshold: ${
+      //       this.duplicateActionThreshold
+      //     }ms)`
+      //   );
+      //   return false;
+      // }
 
       // Record this action execution
       this.lastActionTrigger.set(action, currentTime);
@@ -433,7 +434,7 @@ class InputManager {
       console.log(
         `[INPUT] ${action} action triggered by key: ${triggeringKey} at ${currentTime.toFixed(
           2
-        )}ms`
+        )}ms - JUMP SHOULD WORK NOW!`
       );
 
       // Record in execution history

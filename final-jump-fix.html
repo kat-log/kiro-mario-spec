@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>最終ジャンプ修正版</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      #game-container {
+        background: #000;
+        border: 3px solid #333;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+      }
+
+      #game-canvas {
+        display: block;
+        background: #5c94fc;
+      }
+
+      #controls {
+        margin: 20px 0;
+        text-align: center;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      #debug-panel {
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        margin: 10px 0;
+        max-width: 800px;
+      }
+
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #1976d2;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 3px;
+        margin: 2px;
+        font-weight: bold;
+      }
+
+      .status.good {
+        background: #4caf50;
+        color: white;
+      }
+      .status.bad {
+        background: #f44336;
+        color: white;
+      }
+      .status.warning {
+        background: #ff9800;
+        color: white;
+      }
+
+      .key-indicator {
+        display: inline-block;
+        margin: 5px;
+        padding: 8px 12px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        background: #f9f9f9;
+        font-family: monospace;
+        font-weight: bold;
+      }
+
+      .key-indicator.pressed {
+        background: #4caf50;
+        color: white;
+        border-color: #4caf50;
+      }
+
+      .key-indicator.jump-key {
+        border-color: #2196f3;
+      }
+
+      .key-indicator.jump-key.pressed {
+        background: #ff5722;
+        border-color: #ff5722;
+      }
+
+      .jump-success {
+        background: #4caf50;
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        text-align: center;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🦘 最終ジャンプ修正版</h1>
+
+    <div id="controls">
+      <h3>🎮 操作方法</h3>
+      <p><strong>移動:</strong> ←→ または A/D</p>
+      <p><strong>ジャンプ:</strong> スペース または ↑ または W または Enter</p>
+
+      <h4>🔍 キー状態監視</h4>
+      <div id="key-indicators">
+        <div class="key-indicator jump-key" id="key-Space">Space</div>
+        <div class="key-indicator jump-key" id="key-ArrowUp">↑</div>
+        <div class="key-indicator jump-key" id="key-KeyW">W</div>
+        <div class="key-indicator jump-key" id="key-Enter">Enter</div>
+        <div class="key-indicator" id="key-ArrowLeft">←</div>
+        <div class="key-indicator" id="key-ArrowRight">→</div>
+        <div class="key-indicator" id="key-KeyA">A</div>
+        <div class="key-indicator" id="key-KeyD">D</div>
+      </div>
+
+      <div
+        id="jump-success-indicator"
+        class="jump-success"
+        style="display: none"
+      >
+        🦘 ジャンプ成功！
+      </div>
+    </div>
+
+    <div id="game-container">
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+    </div>
+
+    <div id="debug-panel">
+      <div>
+        FPS: <span id="fps">0</span> | 位置: <span id="position">0, 0</span> |
+        速度: <span id="velocity">0, 0</span> | 地面:
+        <span id="ground" class="status">-</span> | 状態:
+        <span id="state">idle</span>
+      </div>
+
+      <div style="margin-top: 5px">
+        入力状態: <span id="input-status">-</span> | 最後のキー:
+        <span id="last-key">-</span> | ジャンプ検出:
+        <span id="jump-detected" class="status">-</span> | キー状態変化:
+        <span id="key-state-change" class="status">-</span>
+      </div>
+
+      <div style="margin-top: 10px">
+        <button onclick="testJump()">🦘 ジャンプテスト</button>
+        <button onclick="forceJump()">💪 強制ジャンプ</button>
+        <button onclick="resetPlayer()">🔄 プレイヤーリセット</button>
+        <button onclick="debugInput()">🔍 入力デバッグ</button>
+        <button onclick="testKeyStateLogic()">🔧 キー状態ロジックテスト</button>
+      </div>
+
+      <div
+        id="debug-log"
+        style="
+          margin-top: 10px;
+          max-height: 150px;
+          overflow-y: auto;
+          background: #222;
+          padding: 5px;
+          border-radius: 3px;
+        "
+      ></div>
+    </div>
+
+    <script>
+      // 完全に修正されたInputManager - キー状態変化の検出を修正
+      class FinalInputManager {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.keys = {};
+          this.prevKeys = {};
+          this.lastKeyPressed = null;
+          this.frameCount = 0;
+
+          // キーバインディング
+          this.jumpKeys = ["Space", "ArrowUp", "KeyW", "Enter"];
+          this.leftKeys = ["ArrowLeft", "KeyA"];
+          this.rightKeys = ["ArrowRight", "KeyD"];
+
+          // デバッグ用
+          this.keyStateChanges = [];
+          this.jumpDetectionAttempts = [];
+
+          this.setupEventListeners();
+          this.canvas.focus();
+
+          debugLog("✅ FinalInputManager初期化完了");
+          debugLog(`🔧 ジャンプキー設定: ${this.jumpKeys.join(", ")}`);
+        }
+
+        setupEventListeners() {
+          const keydownHandler = (e) => {
+            const keyCode = e.code;
+            const wasPressed = this.keys[keyCode];
+
+            this.keys[keyCode] = true;
+            this.lastKeyPressed = keyCode;
+
+            // キー状態変化を記録
+            if (!wasPressed) {
+              this.keyStateChanges.push({
+                key: keyCode,
+                action: "pressed",
+                time: performance.now(),
+                frame: this.frameCount,
+              });
+            }
+
+            // キー表示更新
+            this.updateKeyIndicator(keyCode, true);
+
+            // ジャンプキーの特別処理
+            if (this.jumpKeys.includes(keyCode)) {
+              debugLog(
+                `🔽 ジャンプキー押下: ${keyCode} (初回: ${!wasPressed}, フレーム: ${
+                  this.frameCount
+                })`
+              );
+              e.preventDefault();
+              e.stopPropagation();
+            }
+
+            // 移動キーの処理
+            if (
+              this.leftKeys.includes(keyCode) ||
+              this.rightKeys.includes(keyCode)
+            ) {
+              e.preventDefault();
+              debugLog(`🔽 移動キー押下: ${keyCode}`);
+            }
+          };
+
+          const keyupHandler = (e) => {
+            const keyCode = e.code;
+            this.keys[keyCode] = false;
+
+            // キー状態変化を記録
+            this.keyStateChanges.push({
+              key: keyCode,
+              action: "released",
+              time: performance.now(),
+              frame: this.frameCount,
+            });
+
+            // キー表示更新
+            this.updateKeyIndicator(keyCode, false);
+
+            if (
+              this.jumpKeys.includes(keyCode) ||
+              this.leftKeys.includes(keyCode) ||
+              this.rightKeys.includes(keyCode)
+            ) {
+              e.preventDefault();
+              debugLog(
+                `🔼 キー離上: ${keyCode} (フレーム: ${this.frameCount})`
+              );
+            }
+          };
+
+          // イベントリスナー設定
+          document.addEventListener("keydown", keydownHandler, {
+            passive: false,
+            capture: true,
+          });
+          document.addEventListener("keyup", keyupHandler, {
+            passive: false,
+            capture: true,
+          });
+
+          // フォーカス管理
+          this.canvas.addEventListener("click", () => {
+            this.canvas.focus();
+            debugLog("🎯 キャンバスフォーカス");
+          });
+        }
+
+        updateKeyIndicator(keyCode, pressed) {
+          const indicator = document.getElementById("key-" + keyCode);
+          if (indicator) {
+            if (pressed) {
+              indicator.classList.add("pressed");
+            } else {
+              indicator.classList.remove("pressed");
+            }
+          }
+        }
+
+        update() {
+          this.frameCount++;
+
+          // 前フレームの状態を保存（重要！）
+          this.prevKeys = { ...this.keys };
+
+          // ログサイズ制限
+          if (this.keyStateChanges.length > 100) {
+            this.keyStateChanges = this.keyStateChanges.slice(-50);
+          }
+          if (this.jumpDetectionAttempts.length > 50) {
+            this.jumpDetectionAttempts = this.jumpDetectionAttempts.slice(-25);
+          }
+        }
+
+        isKeyPressed(keyCode) {
+          const current = this.keys[keyCode] || false;
+          const previous = this.prevKeys[keyCode] || false;
+          const pressed = current && !previous;
+
+          // 詳細なデバッグログ
+          if (this.jumpKeys.includes(keyCode)) {
+            const debugInfo = {
+              key: keyCode,
+              current: current,
+              previous: previous,
+              pressed: pressed,
+              frame: this.frameCount,
+            };
+
+            this.jumpDetectionAttempts.push(debugInfo);
+
+            if (pressed) {
+              debugLog(
+                `🦘 ジャンプキー検出: ${keyCode} (current: ${current}, previous: ${previous})`
+              );
+              this.showJumpSuccess();
+            } else if (current) {
+              debugLog(`🔄 ジャンプキー継続: ${keyCode} (already pressed)`);
+            }
+          }
+
+          return pressed;
+        }
+
+        isKeyHeld(keyCode) {
+          return this.keys[keyCode] || false;
+        }
+
+        showJumpSuccess() {
+          const indicator = document.getElementById("jump-success-indicator");
+          if (indicator) {
+            indicator.style.display = "block";
+            setTimeout(() => {
+              indicator.style.display = "none";
+            }, 1000);
+          }
+        }
+
+        getInput() {
+          // より確実なジャンプ検出
+          const jumpPressed = this.jumpKeys.some((key) => {
+            const pressed = this.isKeyPressed(key);
+            if (pressed) {
+              debugLog(`🎯 ジャンプ入力確認: ${key}`);
+            }
+            return pressed;
+          });
+
+          const jumpHeld = this.jumpKeys.some((key) => this.isKeyHeld(key));
+          const moveLeft = this.leftKeys.some((key) => this.isKeyHeld(key));
+          const moveRight = this.rightKeys.some((key) => this.isKeyHeld(key));
+
+          const input = {
+            jump: jumpPressed,
+            jumpHeld: jumpHeld,
+            moveLeft: moveLeft,
+            moveRight: moveRight,
+          };
+
+          // デバッグ情報更新
+          this.updateDebugUI(input);
+
+          return input;
+        }
+
+        updateDebugUI(input) {
+          const inputStatus = document.getElementById("input-status");
+          const lastKey = document.getElementById("last-key");
+          const jumpDetected = document.getElementById("jump-detected");
+          const keyStateChange = document.getElementById("key-state-change");
+
+          if (inputStatus) {
+            const activeInputs = [];
+            if (input.jump) activeInputs.push("JUMP");
+            if (input.moveLeft) activeInputs.push("LEFT");
+            if (input.moveRight) activeInputs.push("RIGHT");
+            inputStatus.textContent = activeInputs.join(", ") || "なし";
+          }
+
+          if (lastKey) {
+            lastKey.textContent = this.lastKeyPressed || "なし";
+          }
+
+          if (jumpDetected) {
+            if (input.jump) {
+              jumpDetected.textContent = "はい";
+              jumpDetected.className = "status good";
+            } else {
+              jumpDetected.textContent = "いいえ";
+              jumpDetected.className = "status bad";
+            }
+          }
+
+          if (keyStateChange) {
+            const recentChanges = this.keyStateChanges.filter(
+              (change) => performance.now() - change.time < 1000
+            );
+            if (recentChanges.length > 0) {
+              keyStateChange.textContent = `${recentChanges.length}件`;
+              keyStateChange.className = "status good";
+            } else {
+              keyStateChange.textContent = "なし";
+              keyStateChange.className = "status bad";
+            }
+          }
+        }
+
+        getDebugInfo() {
+          return {
+            keys: { ...this.keys },
+            prevKeys: { ...this.prevKeys },
+            lastKeyPressed: this.lastKeyPressed,
+            frameCount: this.frameCount,
+            recentKeyStateChanges: this.keyStateChanges.slice(-10),
+            recentJumpDetectionAttempts: this.jumpDetectionAttempts.slice(-5),
+            focusState: {
+              activeElement: document.activeElement === this.canvas,
+              hasFocus: document.hasFocus(),
+              canvasTabIndex: this.canvas.tabIndex,
+            },
+          };
+        }
+      }
+
+      // プレイヤークラス（変更なし）
+      class FinalPlayer {
+        constructor(x, y) {
+          this.position = { x: x || 100, y: y || 400 };
+          this.velocity = { x: 0, y: 0 };
+          this.size = { width: 32, height: 32 };
+
+          // 物理パラメータ
+          this.moveSpeed = 200;
+          this.jumpPower = 400;
+          this.gravity = 980;
+          this.friction = 0.8;
+
+          // 状態
+          this.isOnGround = false;
+          this.state = "idle";
+          this.facing = "right";
+
+          debugLog("✅ FinalPlayer初期化完了");
+        }
+
+        update(deltaTime, input) {
+          const dt = deltaTime / 1000;
+
+          // 移動入力処理
+          if (input.moveLeft) {
+            this.velocity.x = -this.moveSpeed;
+            this.facing = "left";
+            if (this.isOnGround) this.state = "running";
+          } else if (input.moveRight) {
+            this.velocity.x = this.moveSpeed;
+            this.facing = "right";
+            if (this.isOnGround) this.state = "running";
+          } else {
+            this.velocity.x *= this.friction;
+            if (this.isOnGround && Math.abs(this.velocity.x) < 10) {
+              this.velocity.x = 0;
+              this.state = "idle";
+            }
+          }
+
+          // ジャンプ入力処理 - より詳細なログ
+          if (input.jump) {
+            debugLog(
+              `🦘 ジャンプ入力受信 - 地面: ${this.isOnGround}, 状態: ${
+                this.state
+              }, Y位置: ${this.position.y.toFixed(1)}`
+            );
+            if (this.isOnGround) {
+              const jumpResult = this.jump();
+              debugLog(`🦘 ジャンプ実行結果: ${jumpResult ? "成功" : "失敗"}`);
+            } else {
+              debugLog(
+                `❌ ジャンプ失敗 - 地面にいません (y: ${this.position.y.toFixed(
+                  1
+                )}, ground: ${this.isOnGround})`
+              );
+            }
+          }
+
+          // 重力適用
+          if (!this.isOnGround) {
+            this.velocity.y += this.gravity * dt;
+            this.state = "jumping";
+          }
+
+          // 位置更新
+          this.position.x += this.velocity.x * dt;
+          this.position.y += this.velocity.y * dt;
+
+          // 地面衝突チェック
+          const groundY = 550;
+          if (this.position.y + this.size.height >= groundY) {
+            this.position.y = groundY - this.size.height;
+            this.velocity.y = 0;
+            this.isOnGround = true;
+          } else {
+            this.isOnGround = false;
+          }
+
+          // 画面端制限
+          if (this.position.x < 0) {
+            this.position.x = 0;
+            this.velocity.x = 0;
+          } else if (this.position.x + this.size.width > 800) {
+            this.position.x = 800 - this.size.width;
+            this.velocity.x = 0;
+          }
+        }
+
+        jump() {
+          if (this.isOnGround) {
+            this.velocity.y = -this.jumpPower;
+            this.isOnGround = false;
+            this.state = "jumping";
+            debugLog("🦘 ジャンプ実行成功！速度設定完了");
+            return true;
+          }
+          debugLog("❌ ジャンプ失敗 - 地面にいません");
+          return false;
+        }
+
+        render(ctx) {
+          // プレイヤー本体
+          ctx.fillStyle = this.isOnGround ? "#FF0000" : "#FF6666";
+          ctx.fillRect(
+            this.position.x,
+            this.position.y,
+            this.size.width,
+            this.size.height
+          );
+
+          // 向き表示
+          ctx.fillStyle = "#FFFFFF";
+          const centerX = this.position.x + this.size.width / 2;
+          const centerY = this.position.y + this.size.height / 2;
+
+          ctx.beginPath();
+          if (this.facing === "right") {
+            ctx.moveTo(centerX + 8, centerY);
+            ctx.lineTo(centerX + 2, centerY - 4);
+            ctx.lineTo(centerX + 2, centerY + 4);
+          } else {
+            ctx.moveTo(centerX - 8, centerY);
+            ctx.lineTo(centerX - 2, centerY - 4);
+            ctx.lineTo(centerX - 2, centerY + 4);
+          }
+          ctx.closePath();
+          ctx.fill();
+
+          // ジャンプ軌跡
+          if (!this.isOnGround) {
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+
+        reset() {
+          this.position = { x: 100, y: 400 };
+          this.velocity = { x: 0, y: 0 };
+          this.isOnGround = true;
+          this.state = "idle";
+          debugLog("🔄 プレイヤーリセット");
+        }
+      }
+
+      // ゲームエンジン
+      class FinalGame {
+        constructor() {
+          this.canvas = document.getElementById("game-canvas");
+          this.ctx = this.canvas.getContext("2d");
+
+          // UI要素
+          this.debugElements = {
+            fps: document.getElementById("fps"),
+            position: document.getElementById("position"),
+            velocity: document.getElementById("velocity"),
+            ground: document.getElementById("ground"),
+            state: document.getElementById("state"),
+          };
+
+          // ゲームオブジェクト
+          this.inputManager = new FinalInputManager(this.canvas);
+          this.player = new FinalPlayer(100, 400);
+
+          // タイミング
+          this.lastTime = 0;
+          this.fps = 0;
+          this.frameCount = 0;
+          this.fpsTime = 0;
+
+          debugLog("✅ FinalGame初期化完了");
+          this.start();
+        }
+
+        start() {
+          this.gameLoop();
+        }
+
+        gameLoop() {
+          const currentTime = performance.now();
+          const deltaTime = currentTime - this.lastTime;
+          this.lastTime = currentTime;
+
+          // FPS計算
+          this.frameCount++;
+          if (currentTime - this.fpsTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.fpsTime = currentTime;
+          }
+
+          this.update(deltaTime);
+          this.render();
+          this.updateUI();
+
+          requestAnimationFrame(() => this.gameLoop());
+        }
+
+        update(deltaTime) {
+          // 重要：InputManagerのupdateを最初に呼ぶ
+          this.inputManager.update();
+          const input = this.inputManager.getInput();
+
+          this.player.update(deltaTime, input);
+        }
+
+        render() {
+          // 背景
+          this.ctx.fillStyle = "#5C94FC";
+          this.ctx.fillRect(0, 0, 800, 600);
+
+          // 地面
+          this.ctx.fillStyle = "#8B4513";
+          this.ctx.fillRect(0, 550, 800, 50);
+
+          // プラットフォーム
+          this.ctx.fillStyle = "#228B22";
+          this.ctx.fillRect(200, 450, 150, 20);
+          this.ctx.fillRect(400, 350, 150, 20);
+          this.ctx.fillRect(600, 250, 150, 20);
+
+          // プレイヤー
+          this.player.render(this.ctx);
+
+          // 操作説明
+          this.ctx.fillStyle = "white";
+          this.ctx.font = "16px Arial";
+          this.ctx.textAlign = "center";
+          this.ctx.fillText("今度こそジャンプできるはず！", 400, 30);
+        }
+
+        updateUI() {
+          this.debugElements.fps.textContent = this.fps;
+          this.debugElements.position.textContent = `${Math.round(
+            this.player.position.x
+          )}, ${Math.round(this.player.position.y)}`;
+          this.debugElements.velocity.textContent = `${Math.round(
+            this.player.velocity.x
+          )}, ${Math.round(this.player.velocity.y)}`;
+
+          const groundElement = this.debugElements.ground;
+          if (this.player.isOnGround) {
+            groundElement.textContent = "はい";
+            groundElement.className = "status good";
+          } else {
+            groundElement.textContent = "いいえ";
+            groundElement.className = "status bad";
+          }
+
+          this.debugElements.state.textContent = this.player.state;
+        }
+      }
+
+      // デバッグ関数
+      let game = null;
+      let debugLogElement = null;
+
+      function debugLog(message) {
+        console.log(message);
+        if (debugLogElement) {
+          const timestamp = new Date().toLocaleTimeString();
+          debugLogElement.innerHTML += `[${timestamp}] ${message}\n`;
+          debugLogElement.scrollTop = debugLogElement.scrollHeight;
+        }
+      }
+
+      function testJump() {
+        if (game && game.player) {
+          const result = game.player.jump();
+          debugLog(`🧪 テストジャンプ: ${result ? "成功" : "失敗"}`);
+          return result;
+        }
+        return false;
+      }
+
+      function forceJump() {
+        if (game && game.player) {
+          game.player.position.y = 518;
+          game.player.velocity.y = 0;
+          game.player.isOnGround = true;
+          const result = game.player.jump();
+          debugLog(`💪 強制ジャンプ: ${result ? "成功" : "失敗"}`);
+          return result;
+        }
+        return false;
+      }
+
+      function resetPlayer() {
+        if (game && game.player) {
+          game.player.reset();
+          return true;
+        }
+        return false;
+      }
+
+      function debugInput() {
+        if (game && game.inputManager) {
+          const debugInfo = game.inputManager.getDebugInfo();
+          debugLog("🔍 入力デバッグ情報:");
+          debugLog(`  現在のキー: ${JSON.stringify(debugInfo.keys)}`);
+          debugLog(`  前フレームのキー: ${JSON.stringify(debugInfo.prevKeys)}`);
+          debugLog(`  最後のキー: ${debugInfo.lastKeyPressed || "なし"}`);
+          debugLog(`  フレーム数: ${debugInfo.frameCount}`);
+          debugLog(
+            `  最近のジャンプ検出試行: ${debugInfo.recentJumpDetectionAttempts.length}件`
+          );
+          return debugInfo;
+        }
+        return null;
+      }
+
+      function testKeyStateLogic() {
+        debugLog("🔧 キー状態ロジックテスト開始");
+
+        if (game && game.inputManager) {
+          const manager = game.inputManager;
+
+          // 現在の状態をログ
+          debugLog(`現在のキー状態: ${JSON.stringify(manager.keys)}`);
+          debugLog(`前フレームのキー状態: ${JSON.stringify(manager.prevKeys)}`);
+
+          // 各ジャンプキーの状態をテスト
+          manager.jumpKeys.forEach((key) => {
+            const current = manager.keys[key] || false;
+            const previous = manager.prevKeys[key] || false;
+            const pressed = current && !previous;
+
+            debugLog(
+              `${key}: current=${current}, previous=${previous}, pressed=${pressed}`
+            );
+          });
+
+          return {
+            keys: manager.keys,
+            prevKeys: manager.prevKeys,
+            frameCount: manager.frameCount,
+          };
+        }
+
+        return null;
+      }
+
+      // 初期化
+      window.addEventListener("load", () => {
+        debugLogElement = document.getElementById("debug-log");
+        debugLog("🚀 最終ジャンプ修正版初期化中...");
+
+        try {
+          game = new FinalGame();
+          debugLog("🎮 ゲーム準備完了！");
+          debugLog("🔧 キーボードでジャンプを試してください！");
+
+          // グローバル関数として公開
+          window.game = game;
+          window.testJump = testJump;
+          window.forceJump = forceJump;
+          window.resetPlayer = resetPlayer;
+          window.debugInput = debugInput;
+          window.testKeyStateLogic = testKeyStateLogic;
+        } catch (error) {
+          debugLog("❌ 初期化エラー: " + error.message);
+          console.error("初期化エラー:", error);
+        }
+      });
+    </script>
+  </body>
+</html>

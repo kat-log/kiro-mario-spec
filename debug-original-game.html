@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>元ゲーム デバッグ版</title>
+    <link rel="stylesheet" href="styles/main.css" />
+    <style>
+      #debug-overlay {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 1000;
+        max-width: 300px;
+      }
+
+      #debug-overlay button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin: 2px;
+        font-size: 11px;
+      }
+
+      #debug-overlay button:hover {
+        background: #1976d2;
+      }
+
+      .debug-section {
+        margin: 10px 0;
+        padding: 5px;
+        border: 1px solid #444;
+        border-radius: 3px;
+      }
+
+      .status-good {
+        color: #4caf50;
+      }
+      .status-bad {
+        color: #f44336;
+      }
+      .status-warning {
+        color: #ff9800;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+      <div id="ui-overlay">
+        <div id="hud" class="hidden">
+          <div id="score">Score: <span id="score-value">0</span></div>
+          <div id="coins">Coins: <span id="coin-value">0</span></div>
+          <div id="lives">Lives: <span id="lives-value">3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- デバッグオーバーレイ -->
+    <div id="debug-overlay">
+      <h4>🔧 デバッグ情報</h4>
+
+      <div class="debug-section">
+        <strong>ゲーム状態:</strong><br />
+        モード: <span id="game-mode">-</span><br />
+        FPS: <span id="fps-display">-</span>
+      </div>
+
+      <div class="debug-section">
+        <strong>プレイヤー:</strong><br />
+        位置: <span id="player-pos">-</span><br />
+        速度: <span id="player-vel">-</span><br />
+        地面: <span id="player-ground">-</span><br />
+        状態: <span id="player-state">-</span>
+      </div>
+
+      <div class="debug-section">
+        <strong>入力:</strong><br />
+        最後のキー: <span id="last-key">-</span><br />
+        ジャンプ検出: <span id="jump-detected">-</span><br />
+        入力状態: <span id="input-state">-</span>
+      </div>
+
+      <div class="debug-section">
+        <button onclick="forceStartGame()">🎮 ゲーム強制開始</button>
+        <button onclick="debugJump()">🦘 ジャンプテスト</button><br />
+        <button onclick="forceJump()">💪 強制ジャンプ</button>
+        <button onclick="resetPlayer()">🔄 リセット</button><br />
+        <button onclick="toggleDebug()">📊 詳細ログ</button>
+      </div>
+
+      <div class="debug-section">
+        <strong>ログ:</strong><br />
+        <div
+          id="debug-log"
+          style="
+            max-height: 100px;
+            overflow-y: auto;
+            background: #222;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 10px;
+          "
+        ></div>
+      </div>
+    </div>
+
+    <!-- 元のゲームファイルを読み込み -->
+    <script src="js/focus-manager.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/physics-engine.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/goal.js"></script>
+    <script src="js/stage.js"></script>
+    <script src="js/item.js"></script>
+    <script src="js/ui-system.js"></script>
+    <script src="js/start-screen.js"></script>
+    <script src="js/scene-manager.js"></script>
+    <script src="js/settings-scene.js"></script>
+    <script src="js/stage-select-scene.js"></script>
+    <script src="js/save-system.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/integration-test.js"></script>
+    <script src="js/performance-optimizer.js"></script>
+    <script src="js/system-validator.js"></script>
+    <script src="js/browser-compatibility.js"></script>
+    <script src="js/bug-detector.js"></script>
+    <script src="js/usability-improvements.js"></script>
+    <script src="js/fallback-input-system.js"></script>
+    <script src="js/test-runner.js"></script>
+    <script src="js/jump-diagnostic-system.js"></script>
+    <script src="js/debug-display-system.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+      // デバッグ用のグローバル関数
+      let debugLogElement = null;
+      let detailedLogging = false;
+
+      function debugLog(message) {
+        console.log(message);
+        if (debugLogElement) {
+          const timestamp = new Date().toLocaleTimeString();
+          debugLogElement.innerHTML += `[${timestamp}] ${message}\n`;
+          debugLogElement.scrollTop = debugLogElement.scrollHeight;
+        }
+      }
+
+      function debugJump() {
+        if (window.gameEngine && window.gameEngine.player) {
+          const player = window.gameEngine.player;
+          const gameMode = window.gameEngine.gameState?.mode || "unknown";
+
+          debugLog(`🧪 デバッグジャンプテスト:`);
+          debugLog(`  ゲームモード: ${gameMode}`);
+          debugLog(`  地面: ${player.isOnGround}`);
+          debugLog(`  ブロック中: ${player.isBlocking}`);
+          debugLog(`  状態: ${player.state}`);
+          debugLog(
+            `  位置: ${player.position.x.toFixed(
+              1
+            )}, ${player.position.y.toFixed(1)}`
+          );
+          debugLog(
+            `  速度: ${player.velocity.x.toFixed(
+              1
+            )}, ${player.velocity.y.toFixed(1)}`
+          );
+
+          // ゲームモードが playing でない場合は強制的に切り替え
+          if (gameMode !== "playing") {
+            debugLog(
+              `⚠️ ゲームモードが ${gameMode} です。playingに切り替えます。`
+            );
+            window.gameEngine.startGame();
+            debugLog(`✅ ゲームモードを playing に変更しました。`);
+          }
+
+          const result = player.jump();
+          debugLog(`  結果: ${result ? "成功" : "失敗"}`);
+          return result;
+        }
+        debugLog("❌ プレイヤーが見つかりません");
+        return false;
+      }
+
+      function forceJump() {
+        if (window.gameEngine && window.gameEngine.player) {
+          const player = window.gameEngine.player;
+          const gameMode = window.gameEngine.gameState?.mode || "unknown";
+
+          debugLog(`💪 強制ジャンプ実行`);
+          debugLog(`  現在のゲームモード: ${gameMode}`);
+
+          // ゲームモードを playing に強制変更
+          if (gameMode !== "playing") {
+            debugLog(`  ゲームモードを playing に変更中...`);
+            window.gameEngine.startGame();
+          }
+
+          // 強制的に地面に配置
+          debugLog(`  プレイヤーを地面に配置中...`);
+          player.position.y = 518;
+          player.velocity.y = 0;
+          player.isOnGround = true;
+          player.isBlocking = false;
+          player.state = "idle";
+
+          debugLog(
+            `  ジャンプ前の状態: 位置=${player.position.y}, 速度=${player.velocity.y}, 地面=${player.isOnGround}`
+          );
+
+          const result = player.jump();
+
+          debugLog(
+            `  ジャンプ後の状態: 位置=${player.position.y}, 速度=${player.velocity.y}, 地面=${player.isOnGround}`
+          );
+          debugLog(`  結果: ${result ? "成功" : "失敗"}`);
+
+          // 物理エンジンが動作しているか確認
+          setTimeout(() => {
+            debugLog(
+              `  1秒後の状態: 位置=${player.position.y.toFixed(
+                1
+              )}, 速度=${player.velocity.y.toFixed(1)}`
+            );
+          }, 1000);
+
+          return result;
+        }
+        debugLog("❌ プレイヤーが見つかりません");
+        return false;
+      }
+
+      function resetPlayer() {
+        if (window.gameEngine && window.gameEngine.player) {
+          const player = window.gameEngine.player;
+          player.position = { x: 100, y: 400 };
+          player.velocity = { x: 0, y: 0 };
+          player.isOnGround = true;
+          player.isBlocking = false;
+          player.state = "idle";
+          debugLog("🔄 プレイヤーリセット完了");
+          return true;
+        }
+        debugLog("❌ プレイヤーが見つかりません");
+        return false;
+      }
+
+      function toggleDebug() {
+        detailedLogging = !detailedLogging;
+        debugLog(`📊 詳細ログ: ${detailedLogging ? "ON" : "OFF"}`);
+        return detailedLogging;
+      }
+
+      function forceStartGame() {
+        if (window.gameEngine) {
+          const currentMode = window.gameEngine.gameState?.mode || "unknown";
+          debugLog(`🎮 ゲーム強制開始:`);
+          debugLog(`  現在のモード: ${currentMode}`);
+
+          // 強制的にゲームを開始
+          window.gameEngine.startGame();
+
+          // プレイヤーを適切な位置に配置
+          if (window.gameEngine.player) {
+            window.gameEngine.player.position = { x: 100, y: 400 };
+            window.gameEngine.player.velocity = { x: 0, y: 0 };
+            window.gameEngine.player.isOnGround = true;
+            window.gameEngine.player.isBlocking = false;
+            window.gameEngine.player.state = "idle";
+          }
+
+          const newMode = window.gameEngine.gameState?.mode || "unknown";
+          debugLog(`  新しいモード: ${newMode}`);
+          debugLog(`✅ ゲーム開始完了`);
+
+          return newMode === "playing";
+        }
+        debugLog("❌ ゲームエンジンが見つかりません");
+        return false;
+      }
+
+      // デバッグ情報更新
+      function updateDebugInfo() {
+        if (!window.gameEngine) return;
+
+        const engine = window.gameEngine;
+        const player = engine.player;
+        const inputManager = engine.inputManager;
+
+        // ゲーム状態
+        document.getElementById("game-mode").textContent =
+          engine.gameState?.mode || "-";
+        document.getElementById("fps-display").textContent = engine.fps || "-";
+
+        // プレイヤー情報
+        if (player) {
+          document.getElementById("player-pos").textContent = `${Math.round(
+            player.position.x
+          )}, ${Math.round(player.position.y)}`;
+          document.getElementById("player-vel").textContent = `${Math.round(
+            player.velocity.x
+          )}, ${Math.round(player.velocity.y)}`;
+
+          const groundElement = document.getElementById("player-ground");
+          if (player.isOnGround) {
+            groundElement.textContent = "はい";
+            groundElement.className = "status-good";
+          } else {
+            groundElement.textContent = "いいえ";
+            groundElement.className = "status-bad";
+          }
+
+          document.getElementById("player-state").textContent = player.state;
+        }
+
+        // 入力情報
+        if (inputManager) {
+          const input = inputManager.getPlayerInput();
+
+          document.getElementById("last-key").textContent =
+            inputManager.lastKeyPressed || "-";
+
+          const jumpElement = document.getElementById("jump-detected");
+          if (input.jump) {
+            jumpElement.textContent = "はい";
+            jumpElement.className = "status-good";
+          } else {
+            jumpElement.textContent = "いいえ";
+            jumpElement.className = "status-bad";
+          }
+
+          const activeInputs = [];
+          if (input.jump) activeInputs.push("JUMP");
+          if (input.moveLeft) activeInputs.push("LEFT");
+          if (input.moveRight) activeInputs.push("RIGHT");
+          document.getElementById("input-state").textContent =
+            activeInputs.join(", ") || "なし";
+        }
+      }
+
+      // 初期化
+      window.addEventListener("load", () => {
+        debugLogElement = document.getElementById("debug-log");
+        debugLog("🔧 デバッグオーバーレイ初期化完了");
+
+        // デバッグ情報を定期更新
+        setInterval(updateDebugInfo, 100);
+
+        // グローバル関数として公開
+        window.debugJump = debugJump;
+        window.forceJump = forceJump;
+        window.resetPlayer = resetPlayer;
+        window.toggleDebug = toggleDebug;
+        window.forceStartGame = forceStartGame;
+
+        debugLog("🎮 元ゲームのデバッグ版準備完了");
+      });
+
+      // コンソールからのアクセス用
+      window.addEventListener("keydown", (e) => {
+        if (detailedLogging) {
+          debugLog(`⌨️ キー押下: ${e.code}`);
+        }
+      });
+    </script>
+  </body>
+</html>

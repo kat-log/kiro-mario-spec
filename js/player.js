@@ -293,11 +293,8 @@ class Player {
   jump() {
     const timestamp = performance.now();
 
-    // Enhanced pre-jump validation with lenient conditions
-    const jumpValidation = this.canJumpEnhanced();
-
+    // SIMPLIFIED jump validation for debugging
     console.log(`[JUMP] Jump attempt at ${timestamp.toFixed(2)}ms`, {
-      canJump: jumpValidation.canJump,
       isOnGround: this.isOnGround,
       isBlocking: this.isBlocking,
       playerState: this.state,
@@ -305,43 +302,26 @@ class Player {
       velocity: { ...this.velocity },
       jumpPower: this.jumpPower,
       jumpBoost: this.jumpBoost,
-      validation: jumpValidation,
     });
 
-    // Early return with detailed reason if jump is not possible
-    if (!jumpValidation.canJump) {
-      // Enhanced failure logging with detailed diagnostics
-      const failureDetails = {
-        timestamp: timestamp,
-        reason: jumpValidation.reason,
-        blockingFactors: jumpValidation.blockingFactors,
-        playerState: {
-          isOnGround: this.isOnGround,
-          isBlocking: this.isBlocking,
-          state: this.state,
-          position: { ...this.position },
-          velocity: { ...this.velocity },
-        },
-        groundDiagnostics: {
-          enhancedGroundCheck: jumpValidation.groundCheckDetails,
-          timeSinceGroundContact:
-            jumpValidation.enhancedChecks?.timeSinceGroundContact,
-          recentlyOnGround: jumpValidation.enhancedChecks?.recentlyOnGround,
-          groundConfidence: jumpValidation.enhancedChecks?.groundConfidence,
-        },
-        recommendations:
-          this.generateJumpFailureRecommendations(jumpValidation),
-      };
+    // SIMPLIFIED jump condition check - just check if on ground and not blocking
+    const canJumpSimple = this.isOnGround && !this.isBlocking;
 
-      console.warn(
-        `[JUMP] Jump blocked: ${jumpValidation.reason}`,
-        failureDetails
-      );
+    console.log(
+      `[JUMP] Simple jump check: canJump=${canJumpSimple}, isOnGround=${this.isOnGround}, isBlocking=${this.isBlocking}`
+    );
 
-      // Trigger jump failure callback if available
-      if (this.onJumpFailure) {
-        this.onJumpFailure(failureDetails);
-      }
+    // Early return with simple reason if jump is not possible
+    if (!canJumpSimple) {
+      // Simple failure logging
+      const reason = !this.isOnGround ? "Not on ground" : "Player is blocking";
+      console.warn(`[JUMP] Jump blocked: ${reason}`, {
+        isOnGround: this.isOnGround,
+        isBlocking: this.isBlocking,
+        state: this.state,
+        position: { ...this.position },
+        velocity: { ...this.velocity },
+      });
 
       return false;
     }
@@ -380,19 +360,12 @@ class Player {
       timestamp: performance.now(),
     };
 
-    const jumpExecutionDetails = {
-      preJumpState,
-      postJumpState,
+    console.log(`[JUMP] Jump executed successfully!`, {
       effectiveJumpPower,
-      velocityChange: this.velocity.y - preJumpState.velocity.y,
-      executionTime: postJumpState.timestamp - timestamp,
-      validationUsed: "enhanced",
-      coyoteTimeUsed:
-        jumpValidation.enhancedChecks?.recentlyOnGround &&
-        !preJumpState.isOnGround,
-    };
-
-    console.log(`[JUMP] Jump executed successfully`, jumpExecutionDetails);
+      newVelocityY: this.velocity.y,
+      newState: this.state,
+      isOnGround: this.isOnGround,
+    });
 
     // Play jump sound effect
     if (this.audioManager) {
